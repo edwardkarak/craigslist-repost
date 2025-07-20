@@ -117,16 +117,6 @@ Craigslist uses the title slug + the ID to uniquely identify your post. It needs
 - westchester
 - fairfield co, CT
 
-### Step 3: Test Your Configuration
-Before running the full tool, test your setup:
-
-```bash
-python test_title_slug.py
-```
-(on macOS, run python3 instead of python)
-
-This will verify that the tool can find your posts correctly.
-
 ## How to Use
 
 ### Step 1: Run the Tool
