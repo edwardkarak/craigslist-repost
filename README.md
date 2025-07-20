@@ -43,6 +43,7 @@ posts:
   - id: 1234567890
     category: computers
     area: Brooklyn
+    title_slug: brooklyn-macbook-air-2020
     postal: 11201
 ```
 
@@ -53,14 +54,18 @@ posts:
   - `id`: The post ID from your Craigslist listing URL
   - `category`: The category your post is in (see categories list below)
   - `area`: Your local area/borough (see areas list below)
+  - `title_slug`: The title slug seen in your post URL. Will be explained below.
   - `postal`: Your ZIP code
 
 ### Step 2: Find Your Post Information
 
-**To find your post ID:**
+**To find your post ID and title slug:**
 1. Go to your Craigslist listing
 2. Look at the URL: `https://newyork.craigslist.org/brk/sys/d/macbook-air-2020/1234567890.html`
 3. The number at the end (1234567890) is your post ID
+4. The string after the d and before the ID (macbook-air-2020) is the title slug.
+
+Craigslist uses the title slug + the ID to uniquely identify your post. It needs both.
 
 **Available Categories:**
 - antiques
@@ -118,6 +123,7 @@ Before running the full tool, test your setup:
 ```bash
 python test_title_slug.py
 ```
+(on macOS, run python3 instead of python)
 
 This will verify that the tool can find your posts correctly.
 
@@ -172,15 +178,18 @@ posts:
   - id: 7867090337
     category: computers
     area: Brooklyn
+    title_slug: brooklyn-macbook-air-2020
     postal: 11204
 
   - id: 7867090338
     category: furniture
     area: Manhattan
+    title_slug: my-large-closet-for-sale
     postal: 10001
 
   - id: 7867090339
     category: electronics
     area: Queens
+    title_slug: electronic-keyboard-discount-prices
     postal: 11101
 ```
