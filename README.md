@@ -1,6 +1,6 @@
 # Craigslist Auto-Reposter
 
-Tool that automatically reposts your Craigslist listings to keep them fresh and visible to potential customers. Perfect for small businesses, real estate agents, and anyone who regularly posts on Craigslist.
+Tool that automatically reposts your Craigslist listings to keep them fresh and visible to potential customers. Perfect for small businesses, real estate agents, and anyone who regularly posts on Craigslist. Note that this script may break at any moment, if Craigslist updates their UI/layout.
 
 ## What This Tool Does
 

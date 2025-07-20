@@ -10,7 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 import json
 
-category_mapping_to_zbpos = {
+CATEGORY_TO_ZBPOS = {
     "antiques": 0,
     "appliances": 1,
     "arts & crafts": 2,
@@ -57,7 +57,7 @@ category_mapping_to_zbpos = {
     "video gaming": 43,
     "wanted": 44
 }
-category_mapping_to_slug = {
+CATEGORY_TO_SLUG = {
     "antiques": "atq",
     "appliances": "app",
     "arts+crafts": "art",
@@ -105,7 +105,7 @@ category_mapping_to_slug = {
     "wheels+tires": "wto"
 }
 
-borough_mapping_to_slug = {
+BOROUGH_TO_SLUG = {
     "manhattan": "mnh",
     "brooklyn": "brk",
     "queens": "que",
@@ -124,12 +124,18 @@ borough_mapping_to_slug = {
     "fairfield": "fct",
 }
 
+DEFAULT_ZIP = "10001"
+
+URL_LOGIN = "https://accounts.craigslist.org/login?rp=%2Flogin%2Fhome&rt=L"
+URL_DEL_POST = "https://accounts.craigslist.org/login?rp=%2Flogin%2Fhome&rt=L"
+URL_POST_AD = "https://post.craigslist.org/c"
+
 # Load config
-def load_config():
+def loadConfig():
     with open("config.yml") as f:
         return yaml.safe_load(f)
 
-config = load_config()
+config = loadConfig()
 city_url = config["city_url"]
 posts = config["posts"]
 email = config["email"]
@@ -137,8 +143,8 @@ email = config["email"]
 driver = webdriver.Chrome()
 wait = WebDriverWait(driver, 15)
 
-def log_in():
-    driver.get("https://accounts.craigslist.org/login?rp=%2Flogin%2Fhome&rt=L")
+def login():
+    driver.get(URL_LOGIN)
     print("Please log in manually in the browser window, including solving any captcha if present.")
     # Wait for the user to log in by checking for a post-login element
     try:
@@ -151,7 +157,7 @@ def log_in():
         print("ERROR: Timed out waiting for manual login.")
         raise
 
-def extract_post_data(post_url):
+def extractPostData(post_url):
     res = requests.get(post_url)
     soup = BeautifulSoup(res.text, "html.parser")
     print(f"DEBUG: Fetching {post_url}")
@@ -194,9 +200,9 @@ def extract_post_data(post_url):
         print(f"DEBUG: Fallback extracted {len(images)} images from <img> tags")
     return title, price, body, images
 
-def delete_post(post_id):
+def delPost(post_id):
     print(f"DEBUG: delete_post({post_id})")
-    driver.get("https://accounts.craigslist.org/login?rp=%2Flogin%2Fhome&rt=L")
+    driver.get(URL_DEL_POST)
     wait = WebDriverWait(driver, 10)
     try:
         wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "form.manage.delete")))
@@ -212,15 +218,15 @@ def delete_post(post_id):
     except Exception as e:
         print(f"WARNING: Failed to delete post {post_id}: {e}")
 
-def download_image(url):
+def downloadImage(url):
     res = requests.get(url)
     filename = os.path.join("/tmp", os.path.basename(url.split('?')[0]))
     with open(filename, "wb") as f:
         f.write(res.content)
     return filename
 
-def post_ad(post, title, price, body, images):
-    area_map = {
+def postAd(post, title, price, body, images):
+    AREA_MAP = {
         'brk': 'brooklyn',
         'man': 'manhattan',
         'que': 'queens',
@@ -231,7 +237,7 @@ def post_ad(post, title, price, body, images):
         'wch': 'westchester',
         'ct': 'fairfield co, CT',
     }
-    driver.get("https://post.craigslist.org/c")
+    driver.get(URL_POST_AD)
     print(f"DEBUG: Loaded post URL, URL: {driver.current_url}")
     print(driver.page_source[:1000])
 
@@ -261,7 +267,7 @@ def post_ad(post, title, price, body, images):
             labels = [r.find_element(By.XPATH, "..") for r in radios]
             label_texts = [l.text.strip().lower() for l in labels]
             area_key = post.get('area', '').lower()
-            area_label = area_map.get(area_key, area_key).lower()
+            area_label = AREA_MAP.get(area_key, area_key).lower()
             if any(area_label == t for t in label_texts):
                 print("DEBUG: Detected subarea/borough selection screen")
                 for radio, label in zip(radios, label_texts):
@@ -292,9 +298,9 @@ def post_ad(post, title, price, body, images):
         try:
             if "please choose a category" in driver.page_source.lower():
                 radios = driver.find_elements(By.CSS_SELECTOR, 'input[type="radio"]')
-                if len(radios) > category_mapping_to_zbpos[post['category']]:
+                if len(radios) > CATEGORY_TO_ZBPOS[post['category']]:
                     #radios[21].click()
-                    radios[category_mapping_to_zbpos[post['category']]].click()
+                    radios[CATEGORY_TO_ZBPOS[post['category']]].click()
                     print("DEBUG: Clicked 21st radio button on category page")
                 elif radios:
                     radios[0].click()
@@ -315,7 +321,7 @@ def post_ad(post, title, price, body, images):
                 try:
                     zip_input = driver.find_element(By.NAME, "postal")
                     zip_input.clear()
-                    zip_input.send_keys(str(post.get("postal", "10001")))
+                    zip_input.send_keys(str(post.get("postal", DEFAULT_ZIP)))
                     print("DEBUG: Filled ZIP code in 'postal' field")
                     zip_filled = True
                 except Exception:
@@ -388,7 +394,7 @@ def post_ad(post, title, price, body, images):
             if leaflet_form and zip_input:
                 print("DEBUG: Detected map/geoverify screen")
                 zip_input.clear()
-                zip_input.send_keys(str(post.get("postal", "10001")))
+                zip_input.send_keys(str(post.get("postal", DEFAULT_ZIP)))
                 # Optionally fill cross streets/city if needed
                 try:
                     city_input = driver.find_element(By.NAME, "city")
@@ -423,7 +429,7 @@ def post_ad(post, title, price, body, images):
                     file_input = file_inputs[0]
                     local_images = []
                     for img_url in images[:8]:
-                        local_path = download_image(img_url)
+                        local_path = downloadImage(img_url)
                         local_images.append(local_path)
                     for img_path in local_images:
                         file_input.send_keys(img_path)
@@ -477,18 +483,18 @@ def post_ad(post, title, price, body, images):
         print("ERROR: Failed to complete posting flow. See debug output above.")
 
 try:
-    log_in()
+    login()
     for post in posts:
         try:
             # convert user-friendly string to slug (ex: Musical instruments -> msg, Brooklyn -> brk)
-            category_slug = category_mapping_to_slug[post['category'].lower()]
-            borough_slug = borough_mapping_to_slug[post['area'].lower()]
+            category_slug = CATEGORY_TO_SLUG[post['category'].lower()]
+            borough_slug = BOROUGH_TO_SLUG[post['area'].lower()]
 
             post_url = f"{city_url}/{borough_slug}/{category_slug}/d/{post['title_slug']}/{post['id']}.html"
-            title, price, body, images = extract_post_data(post_url)
+            title, price, body, images = extractPostData(post_url)
             time.sleep(1)
-            delete_post(post['id'])
-            post_ad(post, title, price, body, images)
+            delPost(post['id'])
+            postAd(post, title, price, body, images)
         except Exception as e:
             print(f"ERROR: Failed to process post {post.get('id', 'unknown')}: {e}")
             continue
