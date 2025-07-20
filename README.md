@@ -2,6 +2,8 @@
 
 Tool that automatically reposts your Craigslist listings to keep them fresh and visible to potential customers. Perfect for small businesses, real estate agents, and anyone who regularly posts on Craigslist. Note that this script may break at any moment, if Craigslist updates their UI/layout.
 
+**Important:** Be sure to back up your posts before using this tool.
+
 ## What This Tool Does
 
 - **Automatically reposts your listings**: Keeps your ads at the top of search results
@@ -127,6 +129,7 @@ Open your terminal/command prompt, navigate to the folder with the tool, and run
 ```bash
 python repost.py
 ```
+(on macOS, run python3 instead of python)
 
 ### Step 2: Log In to Craigslist
 When the tool starts:
@@ -151,61 +154,11 @@ The tool will automatically:
 For each post, the tool will:
 
 1. **Find your post** using the ID and category information
-2. **Extract content** including:
-   - Title
-   - Price
-   - Description
-   - All images
+2. **Extract content** including: Title, Price, Description, Images
 3. **Delete the old post** from your account
 4. **Create a new post** with identical content
 5. **Upload images** (up to 8 images per post)
 6. **Publish the new post**
-
-## Troubleshooting
-
-### Common Issues and Solutions
-
-**"Could not derive title_slug for post"**
-- Make sure your post ID is correct
-- Verify the category and area match your actual post
-- Check that your post is still active on Craigslist
-
-**"Failed to process post"**
-- Your post may have been deleted or expired
-- Check that you're logged into the correct Craigslist account
-- Verify your internet connection
-
-**Browser closes unexpectedly**
-- Make sure you have the latest version of Chrome
-- Update ChromeDriver to match your Chrome version
-- Check that no antivirus software is blocking the tool
-
-**"Timed out waiting for manual login"**
-- Make sure you completed the login process
-- Check for any CAPTCHA that needs to be solved
-- Try running the tool again
-
-### Getting Help
-
-If you encounter issues:
-1. Check that all your configuration is correct
-2. Make sure your posts are still active on Craigslist
-3. Verify your internet connection is stable
-4. Try running the test script first: `python test_title_slug.py`
-
-## Best Practices
-
-1. **Keep backups**: Save your original post content in case you need to recreate manually
-2. **Schedule regular reposting**: Run this tool periodically to keep your listings fresh
-3. **Monitor your posts**: Check that reposting was successful
-4. **Follow Craigslist rules**: Don't repost too frequently to avoid being flagged
-
-### What the Tool Does NOT Do
-
-- It doesn't create new content
-- It doesn't change your prices or descriptions
-- It doesn't post to multiple cities automatically
-- It doesn't bypass Craigslist's posting limits
 
 ## Example Configuration
 
