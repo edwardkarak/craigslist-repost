@@ -11,7 +11,8 @@ from selenium.webdriver.support.ui import Select
 import json
 import re
 
-DO_DELETE = False
+# Should be true in production!
+DO_DELETE = True
 
 CATEGORY_TO_ZBPOS = {
 	"antiques": 0,
@@ -151,17 +152,15 @@ wait = WebDriverWait(driver, 15)
 def extract_post_id_from_html(html):
 	soup = BeautifulSoup(html, 'html.parser')
 
-	# Look for the text "View your post at" in the entire HTML content (case insensitive)
 	html_lower = html.lower()
 	if "view your post at" in html_lower:
 		print("DEBUG: Found 'view your post at' text in HTML")
-		# Find all <a> tags and look for the one that comes after "View your post at"
+		# Find all <a> tags and find the one that comes after "View your post at"
 		a_tags = soup.find_all("a")
 		for a_tag in a_tags:
 			href = a_tag.get('href', '')
-			# Check if this href contains a post ID pattern
+			# Check if this href contains post ID
 			if re.search(r'/(\d+)\.html', href):
-				# Verify this is the right link by checking if it's in a context with "View your post at"
 				parent_text = a_tag.parent.get_text().lower() if a_tag.parent else ""
 				if "view your post at" in parent_text:
 					print(f"DEBUG: Found matching a_tag = {a_tag}")
@@ -173,11 +172,10 @@ def extract_post_id_from_html(html):
 						return post_id
 	else:
 		print(f"DEBUG: Could not find 'view your post at' text in HTML")
-		# Debug: print a snippet of the HTML to see what's actually there
 		print(f"DEBUG: HTML snippet: {html[:1000]}")
 	return -1
 
-# id_pairs: List of (oldId, newId) pairs as integers or strings.
+# id_pairs: List of (oldId, newId) pairs
 def updateConfig(id_pairs):
 	nUpdated = 0
 	with open(CONFIG_YAML, 'r') as f:
@@ -203,8 +201,7 @@ def updateConfig(id_pairs):
 
 def login():
 	driver.get(URL_LOGIN)
-	print("Please log in manually in the browser window, including solving any captcha if present.")
-	# Wait for the user to log in by checking for a post-login element
+	print("Waiting for user to log in manually in the browser window, including solving any captcha if present...")
 	try:
 		# Wait until the account home page is loaded (look for a known element) (600 sec = 10 min)
 		WebDriverWait(driver, 600).until(
@@ -243,7 +240,7 @@ def extractPostData(post_url):
 	except Exception:
 		condition = ""
 		print(f"DEBUG: No condition provided")
-		pass # there may not be a condition, skip
+		pass # There may not be a condition, skip
 
 	images = []
 	# Find the <script> tag containing 'imgList'
@@ -311,7 +308,7 @@ def postAd(post, title, price, body, images, condition):
 		'wch': 'westchester',
 		'ct': 'fairfield co, CT',
 	}
-	condition_map = {
+	CONDITION_MAP = {
 		"": 3,
 		"new": 4,
 		"like new": 5,
@@ -441,7 +438,7 @@ def postAd(post, title, price, body, images, condition):
 				else:
 					print(f"DEBUG: Condition = {condition}")
 					try:
-						aria_id = f"ui-id-{condition_map[condition]}"
+						aria_id = f"ui-id-{CONDITION_MAP[condition]}"
 
 						dropdown_button = wait.until(EC.element_to_be_clickable((By.ID, "ui-id-1-button")))
 						dropdown_button.click()
