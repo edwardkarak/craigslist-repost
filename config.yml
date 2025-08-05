@@ -1,9 +1,13 @@
-email: "edkharakh@gmail.com"
-city_url: "https://newyork.craigslist.org"
-
+email: edkharakh@gmail.com
+city_url: https://newyork.craigslist.org
 posts:
-  - id: 7867090812
-    category: computers
-    area: Brooklyn
-    title_slug: brooklyn-macbook-air-2020
-    postal: 11204 # postal/zip code for the post location
+- id: 7871439152
+  category: musical instruments
+  area: Brooklyn
+  title_slug: brooklyn-piano-for-sale
+  postal: 11204
+- id: 7871439262
+  category: musical instruments
+  area: Brooklyn
+  title_slug: brooklyn-guitar-for-sale
+  postal: 11204

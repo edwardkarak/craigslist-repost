@@ -9,6 +9,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 import json
+import re
+
+# TODO: Convert entire file to tabs, make separate commit
+DO_DELETE = False
 
 CATEGORY_TO_ZBPOS = {
     "antiques": 0,
@@ -60,49 +64,49 @@ CATEGORY_TO_ZBPOS = {
 CATEGORY_TO_SLUG = {
     "antiques": "atq",
     "appliances": "app",
-    "arts+crafts": "art",
-    "atv/utv/sno": "snw",
+    "arts & crafts": "art",
+    "atvs, utvs, snowmobiles": "snw",
     "auto parts": "pts",
+    "auto wheels & tires": "wto",
     "aviation": "avo",
-    "baby+kid": "bab",
+    "baby & kid stuff": "bab",
     "barter": "bar",
-    "beauty+hlth": "hab",
-    "bike parts": "bop",
-    "bikes": "bik",
-    "boat parts": "bpo",
-    "boats": "boa",
-    "books": "bks",
-    "business": "bfs",
-    "cars+trucks": "ctd",
-    "cds/dvd/vhs": "emd",
+    "books & magazines": "bks",
+    "business/commercial": "bfs",
+    "cars & trucks ($5)": "ctd",
+    "cds / dvds / vhs": "emd",
     "cell phones": "mob",
-    "clothes+acc": "clo",
+    "clothing & accessories": "clo",
     "collectibles": "clt",
     "computer parts": "sop",
     "computers": "sys",
     "electronics": "ele",
-    "farm+garden": "grd",
-    "free": "zip",
+    "farm & garden": "grd",
+    "free stuff": "zip",
     "furniture": "fuo",
-    "garage sale": "gms",
-    "general": "for",
-    "heavy equip": "hvo",
-    "household": "hsh",
+    "garage & moving sales": "gms",
+    "general for sale": "for",
+    "health and beauty": "hab",
+    "heavy equipment": "hvo",
+    "household items": "hsh",
     "jewelry": "jwl",
     "materials": "mat",
     "motorcycle parts": "mpo",
-    "motorcycles": "mcy",
-    "music instr": "msg",
-    "photo+video": "pho",
-    "rvs+camp": "rvs",
-    "sporting": "spo",
+    "motorcycles/scooters ($5)": "mcy",
+    "musical instruments": "msg",
+    "photo/video": "pho",
+    "rvs ($5)": "rvs",
+    "sporting goods": "spo",
     "tickets": "tid",
     "tools": "tls",
-    "toys+games": "tag",
+    "toys & games": "tag",
     "trailers": "tro",
     "video gaming": "vgm",
     "wanted": "wan",
-    "wheels+tires": "wto"
+    "bicycles": "bik",
+    "bicycle parts": "bop",
+    "boats": "boa",
+    "boat parts": "bpo"
 }
 
 BOROUGH_TO_SLUG = {
@@ -130,9 +134,11 @@ URL_LOGIN = "https://accounts.craigslist.org/login?rp=%2Flogin%2Fhome&rt=L"
 URL_DEL_POST = "https://accounts.craigslist.org/login?rp=%2Flogin%2Fhome&rt=L"
 URL_POST_AD = "https://post.craigslist.org/c"
 
+CONFIG_YAML = "config.yml"
+
 # Load config
 def loadConfig():
-    with open("config.yml") as f:
+    with open(CONFIG_YAML) as f:
         return yaml.safe_load(f)
 
 config = loadConfig()
@@ -143,12 +149,65 @@ email = config["email"]
 driver = webdriver.Chrome()
 wait = WebDriverWait(driver, 15)
 
+def extract_post_id_from_html(html):
+    soup = BeautifulSoup(html, 'html.parser')
+
+    # Look for the text "View your post at" in the entire HTML content (case insensitive)
+    html_lower = html.lower()
+    if "view your post at" in html_lower:
+        print("DEBUG: Found 'view your post at' text in HTML")
+        # Find all <a> tags and look for the one that comes after "View your post at"
+        a_tags = soup.find_all("a")
+        for a_tag in a_tags:
+            href = a_tag.get('href', '')
+            # Check if this href contains a post ID pattern
+            if re.search(r'/(\d+)\.html', href):
+                # Verify this is the right link by checking if it's in a context with "View your post at"
+                parent_text = a_tag.parent.get_text().lower() if a_tag.parent else ""
+                if "view your post at" in parent_text:
+                    print(f"DEBUG: Found matching a_tag = {a_tag}")
+                    print(f"DEBUG: href = {href}")
+                    match = re.search(r'/(\d+)\.html', href)
+                    if match:
+                        post_id = int(match.group(1))
+                        print(f"DEBUG: Extracted post ID: {post_id}")
+                        return post_id
+    else:
+        print(f"DEBUG: Could not find 'view your post at' text in HTML")
+        # Debug: print a snippet of the HTML to see what's actually there
+        print(f"DEBUG: HTML snippet: {html[:1000]}")
+    return -1
+
+# id_pairs: List of (oldId, newId) pairs as integers or strings.
+def updateConfig(id_pairs):
+    nUpdated = 0
+    with open(CONFIG_YAML, 'r') as f:
+        config = yaml.safe_load(f)
+
+    # Make a mapping for fast lookup
+    id_map = {str(old): str(new) for old, new in id_pairs}
+
+    for post in config.get("posts", []):
+        post_id_str = str(post.get("id"))
+        if post_id_str in id_map:
+            if int(id_map[post_id_str]) != -1:
+                post["id"] = int(id_map[post_id_str])
+                nUpdated += 1
+
+    with open(CONFIG_YAML, 'w') as f:
+        yaml.dump(config, f, sort_keys=False)
+
+    if nUpdated > 0:
+        print(f"DEBUG: {CONFIG_YAML} updated successfully: {nUpdated} IDs updated.")
+    else:
+        print(f"DEBUG: Did not update {CONFIG_YAML}.")
+
 def login():
     driver.get(URL_LOGIN)
     print("Please log in manually in the browser window, including solving any captcha if present.")
     # Wait for the user to log in by checking for a post-login element
     try:
-        # Wait until the account home page is loaded (look for a known element)
+        # Wait until the account home page is loaded (look for a known element) (600 sec = 10 min)
         WebDriverWait(driver, 600).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/logout']"))
         )
@@ -166,14 +225,26 @@ def extractPostData(post_url):
     if not title_tag:
         raise Exception(f"Could not find title for post at {post_url}")
     title = title_tag.text.strip()
+    print(f"DEBUG: Got title {title}")
 
     price_tag = soup.find("span", class_="price")
     price = price_tag.text.strip().replace("$", "").replace(",", "") if price_tag else ""
+    print(f"DEBUG: Got price ${price}")
 
     body_elem = soup.find("section", id="postingbody")
     if not body_elem:
         raise Exception(f"Could not find body for post at {post_url}")
     body = body_elem.get_text("\n").strip().replace("QR Code Link to This Post", "").strip()
+    print(f"DEBUG: Got body text starting w/ {body[0:40]}...")
+
+    try:
+        condition_elem = soup.find("span", class_="valu")
+        condition = condition_elem.get_text("\n").strip() # Condition of the item (new, used, etc.)
+        print(f"DEBUG: Got item condition {condition}")
+    except Exception:
+        condition = ""
+        print(f"DEBUG: No condition provided")
+        pass # there may not be a condition, skip
 
     images = []
     # Find the <script> tag containing 'imgList'
@@ -198,10 +269,10 @@ def extractPostData(post_url):
             if img_url and img_url.startswith("http"):
                 images.append(img_url)
         print(f"DEBUG: Fallback extracted {len(images)} images from <img> tags")
-    return title, price, body, images
+    return title, price, body, images, condition
 
 def delPost(post_id):
-    print(f"DEBUG: delete_post({post_id})")
+    print(f"DEBUG: delPost({post_id})")
     driver.get(URL_DEL_POST)
     wait = WebDriverWait(driver, 10)
     try:
@@ -211,6 +282,9 @@ def delPost(post_id):
         delete_button.click()
         try:
             confirm_button = wait.until(EC.element_to_be_clickable((By.NAME, "go")))
+            # Don't want to undo the delete
+            if confirm_button.text == "Undelete this Posting":
+                return
             confirm_button.click()
         except Exception:
             pass
@@ -225,7 +299,8 @@ def downloadImage(url):
         f.write(res.content)
     return filename
 
-def postAd(post, title, price, body, images):
+# postAd: return ID of ad posted or -1 on failure
+def postAd(post, title, price, body, images, condition):
     AREA_MAP = {
         'brk': 'brooklyn',
         'man': 'manhattan',
@@ -237,6 +312,16 @@ def postAd(post, title, price, body, images):
         'wch': 'westchester',
         'ct': 'fairfield co, CT',
     }
+    condition_map = {
+        "": 3,
+        "new": 4,
+        "like new": 5,
+        "excellent": 6,
+        "good": 7,
+        "fair": 8,
+        "salvage": 9
+    }
+
     driver.get(URL_POST_AD)
     print(f"DEBUG: Loaded post URL, URL: {driver.current_url}")
     print(driver.page_source[:1000])
@@ -309,7 +394,7 @@ def postAd(post, title, price, body, images):
                 continue
         except Exception:
             pass
-        # 5. Post details (title, price, body fields)
+        # 5. Post details (title, price, body fields, condition)
         try:
             title_input = driver.find_element(By.NAME, "PostingTitle")
             if title_input:
@@ -330,7 +415,7 @@ def postAd(post, title, price, body, images):
                     try:
                         zip_input = driver.find_element(By.NAME, "postal_code")
                         zip_input.clear()
-                        zip_input.send_keys(str(post.get("postal", "10001")))
+                        zip_input.send_keys(str(post.get("postal", DEFAULT_ZIP)))
                         print("DEBUG: Filled ZIP code in 'postal_code' field")
                         zip_filled = True
                     except Exception:
@@ -350,6 +435,28 @@ def postAd(post, title, price, body, images):
                     driver.find_element(By.NAME, "contact_text_ok").click()
                 except Exception:
                     pass
+
+                # Fill condition (used, new, etc.) field if present
+                if condition == "":
+                    print(f"DEBUG: No condition provided, so won't be filled")
+                else:
+                    print(f"DEBUG: Condition = {condition}")
+                    try:
+                        aria_id = f"ui-id-{condition_map[condition]}"
+
+                        dropdown_button = wait.until(EC.element_to_be_clickable((By.ID, "ui-id-1-button")))
+                        dropdown_button.click()
+
+                        # Wait for menu to appear ---
+                        wait.until(EC.visibility_of_element_located((By.ID, "ui-id-1-menu")))
+
+                        # Click the correct option ---
+                        li_option = wait.until(EC.element_to_be_clickable((By.ID, aria_id)))
+                        li_option.click()
+                        print("DEBUG: Selected condition:", condition)
+                    except Exception as e:
+                        print(f"ERROR: Problem with condition: {e}")
+                        pass
                 driver.find_element(By.NAME, "go").click()
                 continue
         except Exception:
@@ -472,7 +579,10 @@ def postAd(post, title, price, body, images):
         if "thanks for posting!" in page.lower() or "your posting can be seen at" in page:
             print("DEBUG: Detected success screen. Posting complete!")
             done = True
-            break
+            print(f"DEBUG: Page = {page}")
+            retval = extract_post_id_from_html(page)
+            print(f"DEBUG: retval = {retval}")
+            return retval
         # 10. Fallback: unknown screen
         print("DEBUG: Unknown screen, dumping page source")
         print(driver.page_source[:5000])
@@ -481,7 +591,9 @@ def postAd(post, title, price, body, images):
         break
     if not done:
         print("ERROR: Failed to complete posting flow. See debug output above.")
+    return -1
 
+idPairs = []
 try:
     login()
     for post in posts:
@@ -489,14 +601,23 @@ try:
             # convert user-friendly string to slug (ex: Musical instruments -> msg, Brooklyn -> brk)
             category_slug = CATEGORY_TO_SLUG[post['category'].lower()]
             borough_slug = BOROUGH_TO_SLUG[post['area'].lower()]
+            print(f"DEBUG: category_slug = {category_slug}")
+            print(f"DEBUG: borough_slug = {borough_slug}")
 
             post_url = f"{city_url}/{borough_slug}/{category_slug}/d/{post['title_slug']}/{post['id']}.html"
-            title, price, body, images = extractPostData(post_url)
+            title, price, body, images, condition = extractPostData(post_url)
             time.sleep(1)
-            delPost(post['id'])
-            postAd(post, title, price, body, images)
+            if DO_DELETE:
+                delPost(post['id'])
+            oldId = post['id']
+            newId = postAd(post, title, price, body, images, condition)
+            idPairs.append((oldId, newId))
         except Exception as e:
             print(f"ERROR: Failed to process post {post.get('id', 'unknown')}: {e}")
             continue
+
+    print(f"DEBUG: Updating {CONFIG_YAML} with new post IDs:")
+    print(f"DEBUG: idPairs = {idPairs}")
+    updateConfig(idPairs) # Replace old ID with new ID in config file to allow for re-reposting
 finally:
     driver.quit()
