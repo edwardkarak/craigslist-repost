@@ -1,13 +1,13 @@
-email: edkharakh@gmail.com
 city_url: https://newyork.craigslist.org
+email: edkharakh@gmail.com
 posts:
-- id: 7871439152
-  category: musical instruments
-  area: Brooklyn
+- id: 7872488379
   title_slug: brooklyn-piano-for-sale
-  postal: 11204
-- id: 7871439262
   category: musical instruments
   area: Brooklyn
+  postal: 11204
+- id: 7872488489
   title_slug: brooklyn-guitar-for-sale
+  category: musical instruments
+  area: Brooklyn
   postal: 11204
