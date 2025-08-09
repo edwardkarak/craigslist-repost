@@ -11,7 +11,7 @@ from selenium.webdriver.support.ui import Select
 import json
 import re
 
-# Should be true in production!
+# Should be True in production!
 DO_DELETE = True
 
 CATEGORY_TO_ZBPOS = {
@@ -136,7 +136,6 @@ URL_POST_AD = "https://post.craigslist.org/c"
 
 CONFIG_YAML = "config.yml"
 
-# Load config
 def loadConfig():
 	with open(CONFIG_YAML) as f:
 		return yaml.safe_load(f)
@@ -149,7 +148,7 @@ email = config["email"]
 driver = webdriver.Chrome()
 wait = WebDriverWait(driver, 15)
 
-def extract_post_id_from_html(html):
+def extractPostIdFromHTML(html):
 	soup = BeautifulSoup(html, 'html.parser')
 
 	html_lower = html.lower()
@@ -167,32 +166,45 @@ def extract_post_id_from_html(html):
 					print(f"DEBUG: href = {href}")
 					match = re.search(r'/(\d+)\.html', href)
 					if match:
-						post_id = int(match.group(1))
+						post_id = match.group(1)
 						print(f"DEBUG: Extracted post ID: {post_id}")
 						return post_id
 	else:
 		print(f"DEBUG: Could not find 'view your post at' text in HTML")
-		print(f"DEBUG: HTML snippet: {html[:1000]}")
-	return -1
+		print(f"DUMP: HTML snippet: {html[:1000]}")
+	return ""
 
-# id_pairs: List of (oldId, newId) pairs
+# id_pairs: List of (oldId, newId) pairs as strings
 def updateConfig(id_pairs):
 	nUpdated = 0
 	with open(CONFIG_YAML, 'r') as f:
 		config = yaml.safe_load(f)
 
 	# Make a mapping for fast lookup
-	id_map = {str(old): str(new) for old, new in id_pairs}
+	id_map = {old: new for old, new in id_pairs}
 
 	for post in config.get("posts", []):
 		post_id_str = str(post.get("id"))
 		if post_id_str in id_map:
-			if int(id_map[post_id_str]) != -1:
-				post["id"] = int(id_map[post_id_str])
-				nUpdated += 1
+			# All entries in id_map are successful posts
+			post["id"] = id_map[post_id_str]
+			nUpdated += 1
+
+	# Manually construct YAML with unquoted IDs
+	yaml_lines = []
+	yaml_lines.append(f"city_url: {config['city_url']}")
+	yaml_lines.append(f"email: {config['email']}")
+	yaml_lines.append("posts:")
+
+	for post in config.get("posts", []):
+		yaml_lines.append("- id: " + str(post["id"]))  # Unquoted ID
+		yaml_lines.append(f"  title_slug: {post['title_slug']}")
+		yaml_lines.append(f"  category: {post['category']}")
+		yaml_lines.append(f"  area: {post['area']}")
+		yaml_lines.append(f"  postal: {post['postal']}")
 
 	with open(CONFIG_YAML, 'w') as f:
-		yaml.dump(config, f, sort_keys=False)
+		f.write("\n".join(yaml_lines) + "\n")
 
 	if nUpdated > 0:
 		print(f"DEBUG: {CONFIG_YAML} updated successfully: {nUpdated} IDs updated.")
@@ -231,7 +243,7 @@ def extractPostData(post_url):
 	if not body_elem:
 		raise Exception(f"Could not find body for post at {post_url}")
 	body = body_elem.get_text("\n").strip().replace("QR Code Link to This Post", "").strip()
-	print(f"DEBUG: Got body text starting w/ {body[0:40]}...")
+	print(f"DEBUG: Got body text starting w/:\t{body[0:40]}...")
 
 	try:
 		condition_elem = soup.find("span", class_="valu")
@@ -295,7 +307,7 @@ def downloadImage(url):
 		f.write(res.content)
 	return filename
 
-# postAd: return ID of ad posted or -1 on failure
+# postAd: return ID of ad posted as string or "" on failure
 def postAd(post, title, price, body, images, condition):
 	AREA_MAP = {
 		'brk': 'brooklyn',
@@ -319,7 +331,12 @@ def postAd(post, title, price, body, images, condition):
 	}
 
 	driver.get(URL_POST_AD)
-	print(f"DEBUG: Loaded post URL, URL: {driver.current_url}")
+	if "/manage/" in driver.current_url:
+		print(f"ERROR: SHOULD NOT BE ON MANAGE PAGE WHEN MAKING NEW POST!!!!!!!!!!")
+		print(f"DEBUG: {driver.current_url}")
+		x = input("")
+
+	print(f"DEBUG: Loaded post URL, URL: {driver.current_url}") # why is this the manage page?
 	print(driver.page_source[:1000])
 
 	done = False
@@ -443,10 +460,10 @@ def postAd(post, title, price, body, images, condition):
 						dropdown_button = wait.until(EC.element_to_be_clickable((By.ID, "ui-id-1-button")))
 						dropdown_button.click()
 
-						# Wait for menu to appear ---
+						# Wait for menu to appear
 						wait.until(EC.visibility_of_element_located((By.ID, "ui-id-1-menu")))
 
-						# Click the correct option ---
+						# Click the correct option
 						li_option = wait.until(EC.element_to_be_clickable((By.ID, aria_id)))
 						li_option.click()
 						print("DEBUG: Selected condition:", condition)
@@ -573,25 +590,26 @@ def postAd(post, title, price, body, images, condition):
 			pass
 		# 9. Check for success
 		if "thanks for posting!" in page.lower() or "your posting can be seen at" in page:
-			print("DEBUG: Detected success screen. Posting complete!")
 			done = True
+			retval = extractPostIdFromHTML(page)
+			print("✅SUCCESS: Detected success screen. Posting complete")
 			print(f"DEBUG: Page = {page}")
-			retval = extract_post_id_from_html(page)
 			print(f"DEBUG: retval = {retval}")
 			return retval
 		# 10. Fallback: unknown screen
 		print("DEBUG: Unknown screen, dumping page source")
 		print(driver.page_source[:5000])
 		time.sleep(2)
-		# Optionally, break or continue to avoid infinite loop
 		break
 	if not done:
 		print("ERROR: Failed to complete posting flow. See debug output above.")
-	return -1
+	return ""
 
 idPairs = []
 try:
 	login()
+	print(f"DEBUG: Num of posts = {len(posts)}")
+
 	for post in posts:
 		try:
 			# convert user-friendly string to slug (ex: Musical instruments -> msg, Brooklyn -> brk)
@@ -605,9 +623,13 @@ try:
 			time.sleep(1)
 			if DO_DELETE:
 				delPost(post['id'])
-			oldId = post['id']
+			oldId = str(post['id'])
+			time.sleep(2)
 			newId = postAd(post, title, price, body, images, condition)
-			idPairs.append((oldId, newId))
+			if newId != "":
+				idPairs.append((oldId, newId))
+			else:
+				print(f"DEBUG: Post {oldId} failed to repost, skipping config update")
 		except Exception as e:
 			print(f"ERROR: Failed to process post {post.get('id', 'unknown')}: {e}")
 			continue
