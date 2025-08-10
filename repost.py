@@ -14,6 +14,8 @@ import sounddevice as sd
 import librosa
 
 DO_DELETE = True # should be True in production!
+CONFIG_YAML = "config.yml"
+
 DO_PLAY_INTRO_SOUND = True
 N_REP_SOUND = 4 # Number of times to repeat intro sound
 INTRO_SOUND_FILE = "tada.wav"
@@ -138,11 +140,12 @@ URL_LOGIN = "https://accounts.craigslist.org/login?rp=%2Flogin%2Fhome&rt=L"
 URL_DEL_POST = "https://accounts.craigslist.org/login?rp=%2Flogin%2Fhome&rt=L"
 URL_POST_AD = "https://post.craigslist.org/c"
 
-CONFIG_YAML = "config.yml"
-
+LOGIN_WAIT_SECONDS = 600 # 10 mins
+MAX_POST_AD_STEPS = 20
 HTML_DUMP_TRIM_MAX_CHARS = 500
 TITLE_DEBUG_TRIM_MAX_CHARS = 60
-MAX_IMAGES = 8
+MAX_IMAGES = 8 # TODO: increase, real max is 24
+TEMP_IMAGES_LOCATION = "/tmp"
 
 def playIntroSound():
 	try:
@@ -173,7 +176,7 @@ def extractPostIdFromHTML(html):
 	htmlLower = html.lower()
 	if "view your post at" in htmlLower:
 		print("DEBUG: Found 'view your post at' text in HTML")
-		# Find all <a> tags and find the one that comes after "View your post at"
+		# Find all <a> tags and find the one coming immediately after "View your post at"
 		aTags = soup.find_all("a")
 		for aTag in aTags:
 			href = aTag.get('href', '')
@@ -193,7 +196,7 @@ def extractPostIdFromHTML(html):
 		print(f"DUMP: HTML snippet: {html[:HTML_DUMP_TRIM_MAX_CHARS]}")
 	return ""
 
-# id_pairs: List of (oldId, newId) pairs as strings
+# idPairs: List of (oldId, newId) pairs as strings
 def updateConfig(idPairs):
 	nUpdated = 0
 	with open(CONFIG_YAML, 'r') as f:
@@ -208,7 +211,6 @@ def updateConfig(idPairs):
 			post["id"] = idMap[strPostId]
 			nUpdated += 1
 
-	# Manually construct YAML with unquoted IDs
 	yamlLines = []
 	yamlLines.append(f"city_url: {config['city_url']}")
 	yamlLines.append(f"email: {config['email']}")
@@ -233,13 +235,13 @@ def login():
 	driver.get(URL_LOGIN)
 	print("Waiting for user to log in manually in the browser window, including solving any captcha if present...")
 	try:
-		# Wait until the account home page is loaded (look for a known element) (600 sec = 10 min)
-		WebDriverWait(driver, 600).until(
+		# Wait until the account home page is loaded (look for a known element)
+		WebDriverWait(driver, LOGIN_WAIT_SECONDS).until(
 			EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/logout']"))
 		)
 		print("DEBUG: Login detected, proceeding...")
 	except Exception:
-		print("ERROR: Timed out waiting for manual login.")
+		print(f"ERROR: Timed out waiting {LOGIN_WAIT_SECONDS} secs for manual login.")
 		raise
 
 def extractPostData(postURL):
@@ -304,23 +306,23 @@ def delPost(postId):
 	try:
 		wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "form.manage.delete")))
 		form = driver.find_element(By.CSS_SELECTOR, f"form.manage.delete[data-posting-id='{postId}']")
-		delete_button = form.find_element(By.CSS_SELECTOR, "input[type='submit'][value='delete']")
-		delete_button.click()
+		delBtn = form.find_element(By.CSS_SELECTOR, "input[type='submit'][value='delete']")
+		delBtn.click()
 		try:
-			confirm_button = wait.until(EC.element_to_be_clickable((By.NAME, "go")))
+			confirmBtn = wait.until(EC.element_to_be_clickable((By.NAME, "go")))
 			# Don't want to undo the delete
-			if confirm_button.text == "Undelete this Posting":
+			if confirmBtn.text == "Undelete this Posting":
 				return
-			confirm_button.click()
+			confirmBtn.click()
 		except Exception:
 			pass
 		print(f"DEBUG: Post {postId} deleted.")
 	except Exception as e:
-		print(f"WARNING: Failed to delete post {postId}: {e}")
+		print(f"❌ERROR: Failed to delete post {postId}: {e}")
 
 def downloadImage(url):
 	res = requests.get(url)
-	filename = os.path.join("/tmp", os.path.basename(url.split('?')[0]))
+	filename = os.path.join(TEMP_IMAGES_LOCATION, os.path.basename(url.split('?')[0]))
 	with open(filename, "wb") as f:
 		f.write(res.content)
 	return filename
@@ -350,17 +352,16 @@ def postAd(post, title, price, body, images, condition):
 
 	driver.get(URL_POST_AD)
 	if "/manage/" in driver.current_url:
-		print(f"ERROR: SHOULD NOT BE ON MANAGE PAGE WHEN MAKING NEW POST!!!!!!!!!!")
+		print(f"❌ERROR: SHOULD NOT BE ON MANAGE PAGE WHEN MAKING NEW POST!")
 		print(f"DEBUG: {driver.current_url}")
-		x = input("")
+		x = input("") # TODO: make sure we don't edit, but make new post instead
 
-	print(f"DEBUG: Loaded post URL, URL: {driver.current_url}") # why is this the manage page?
+	print(f"DEBUG: Loaded post URL, URL: {driver.current_url}") # TODO: why is this the manage page?
 	print(driver.page_source[:HTML_DUMP_TRIM_MAX_CHARS])
 
 	done = False
-	maxSteps = 20
 	steps = 0
-	while not done and steps < maxSteps:
+	while not done and steps < MAX_POST_AD_STEPS:
 		steps += 1
 		time.sleep(2)
 		page = driver.page_source.lower()
@@ -573,6 +574,13 @@ def postAd(post, title, price, body, images, condition):
 						fileInput.send_keys(imgPath)
 						print(f"DEBUG: Uploaded image {imgPath}")
 						time.sleep(2)
+
+					for imgPath in localImages:
+						try:
+							os.remove(imgPath)
+						except Exception as e:
+							print(f"WARNING: Could not delete temporary file {imgPath}: {e}")
+						print(f"DEBUG: Deleted image {imgPath} from temp storage")
 				else:
 					print("DEBUG: No file input found on image upload screen")
 				# Click the 'done with images' button to proceed
@@ -591,18 +599,18 @@ def postAd(post, title, price, body, images, condition):
 			pass
 		# 8. Publish/confirm
 		try:
-			go_btn = driver.find_element(By.NAME, "go")
-			if go_btn:
+			goBtn = driver.find_element(By.NAME, "go")
+			if goBtn:
 				print("DEBUG: Detected publish/confirm screen")
-				go_btn.click()
+				goBtn.click()
 				continue
 		except Exception:
 			pass
 		try:
-			publish_btn = driver.find_element(By.CSS_SELECTOR, "input[value='publish']")
-			if publish_btn:
+			publishBtn = driver.find_element(By.CSS_SELECTOR, "input[value='publish']")
+			if publishBtn:
 				print("DEBUG: Detected publish button")
-				publish_btn.click()
+				publishBtn.click()
 				continue
 		except Exception:
 			pass
