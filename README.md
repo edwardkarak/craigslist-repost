@@ -1,16 +1,16 @@
 # Craigslist Auto-Reposter
 
-Tool that automatically reposts your Craigslist listings to keep them fresh and visible to potential customers. Perfect for small businesses, real estate agents, and anyone who regularly posts on Craigslist.
+Tool for reposting your Craigslist listings to keep them fresh and visible to potential customers. Perfect for small businesses, real estate agents, and anyone who regularly posts on Craigslist.
 
 **Note:** This script may break at any moment, if Craigslist updates their UI/layout.
 
-**Important:** Be sure to back up your posts before using this tool.
+**Important:** Back up your posts before using this tool.
 
 ## Prerequisites
 
 1. **Python 3.7 or higher** installed on your computer
-2. **Google Chrome browser** installed
-3. **A Craigslist account** (free to create at [accounts.craigslist.org](https://accounts.craigslist.org))
+2. **Google Chrome** installed
+3. **Craigslist account** (free to create at [accounts.craigslist.org](https://accounts.craigslist.org))
 
 ## Installation
 
@@ -114,9 +114,14 @@ Craigslist uses the title slug + the ID to uniquely identify your post. It needs
 
 ## How to Use
 
-### Step 1: Run the Tool
-Open your terminal/command prompt, navigate to the folder with the tool, and run:
+### Step 1
+#### Option 1: Automated Scheduling (Recommended)
+Set up automated scheduling by following the steps in "Automated Scheduling (macOS)" section below. Now, you can repost the same ads, for example, daily at 7AM, keeping your posts at the top. The script will run automatically at regular intervals.
 
+#### Option 2: Manual Execution
+If you want to run the script manually:
+
+1. Open your terminal/command prompt, navigate to the folder with the tool, and run:
 ```bash
 python repost.py
 ```
@@ -174,26 +179,9 @@ cd -
 4. In the event details, click **"Add Alert"**
 5. Choose **"Custom"** and select **"Open File"**
 6. Navigate to and select your **"Craigslist Reposter.app"** file
-7. Set the alert to trigger at the time you want the script to run
+7. Set the alert to trigger at the time you want the script to run. You can also have the event repeat, for example daily.
 
-### Step 3: Test the Setup
-
-1. Double-click your **"Craigslist Reposter.app"** to test it manually
-2. Check the `debug.log` file in TextEdit to ensure it's working correctly
-3. The script will run automatically according to your calendar schedule
-
-**Note:** The script will still require manual login to Craigslist the first time it runs in each session.
-
-## What Happens During Reposting
-
-For each post, the tool will:
-
-1. **Find your post** using the ID and category information
-2. **Extract content** including: Title, Price, Description, Images
-3. **Delete the old post** from your account
-4. **Create a new post** with identical content
-5. **Upload images** (up to 8 images per post)
-6. **Publish the new post**
+**Note:** You will hear a sound each time when the script starts. This is to let you know that you have to log in. Everything else gets done automatically.
 
 ## Example Configuration
 
