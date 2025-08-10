@@ -1,15 +1,10 @@
 # Craigslist Auto-Reposter
 
-Tool that automatically reposts your Craigslist listings to keep them fresh and visible to potential customers. Perfect for small businesses, real estate agents, and anyone who regularly posts on Craigslist. Note that this script may break at any moment, if Craigslist updates their UI/layout.
+Tool that automatically reposts your Craigslist listings to keep them fresh and visible to potential customers. Perfect for small businesses, real estate agents, and anyone who regularly posts on Craigslist.
+
+**Note:** This script may break at any moment, if Craigslist updates their UI/layout.
 
 **Important:** Be sure to back up your posts before using this tool.
-
-## What This Tool Does
-
-- **Automatically reposts your listings**: Keeps your ads at the top of search results
-- **Preserves all content**: Maintains your original title, description, price, and images
-- **Handles multiple posts**: Process multiple listings in one session
-- **Smart URL handling**: Automatically finds your posts using just the post ID
 
 ## Prerequisites
 
@@ -26,7 +21,7 @@ Download all the files in this folder to your computer.
 Open your terminal/command prompt and run:
 
 ```bash
-pip install selenium beautifulsoup4 requests pyyaml
+pip install selenium beautifulsoup4 requests pyyaml librosa sounddevice
 ```
 (On macOS, run pip3 instead of pip)
 
@@ -131,7 +126,7 @@ python repost.py
 When the tool starts:
 1. A Chrome browser window will open
 2. You'll be taken to the Craigslist login page
-3. **Manually log in** to your Craigslist account
+3. Manually log in to your Craigslist account
 4. If there's a CAPTCHA, solve it manually
 5. Wait for the tool to detect your successful login
 
@@ -144,6 +139,50 @@ The tool will automatically:
 5. Move to the next post
 
 **Important:** Don't close the browser window or interfere with the process while it's running.
+
+## Automated Scheduling (macOS)
+
+You can set up automatic reposting using macOS Calendar and Automator to run the script at regular intervals.
+
+### Step 1: Create an Automator Script
+
+1. Open **Automator** (found in Applications > Utilities)
+2. Choose **"New Document"** and select **"Application"**
+3. In the search bar, type **"Run Shell Script"** and drag it to the workflow area
+4. Set the shell to **"/bin/bash"**
+5. Paste the following code into the script area:
+
+```bash
+#!/bin/bash
+cd /path/to/your/craigslist-auto-reposter
+source my_env/bin/activate
+echo "$(date '+%a %b %-d, %Y, %-I:%M %p')" >> debug.log
+python3 repost.py >> debug.log 2>&1
+echo "=================================================================================================================" >> debug.log
+cd -
+```
+
+**Important:** Replace `/path/to/your/craigslist-auto-reposter` with the actual path to your project folder.
+
+6. Save the application as **"Craigslist Reposter.app"** (or any name you want)
+
+### Step 2: Set Up Calendar Event
+
+1. Open **Calendar** app
+2. Create a new event
+3. Set the event to repeat at your desired interval (e.g., daily, weekly)
+4. In the event details, click **"Add Alert"**
+5. Choose **"Custom"** and select **"Open File"**
+6. Navigate to and select your **"Craigslist Reposter.app"** file
+7. Set the alert to trigger at the time you want the script to run
+
+### Step 3: Test the Setup
+
+1. Double-click your **"Craigslist Reposter.app"** to test it manually
+2. Check the `debug.log` file in TextEdit to ensure it's working correctly
+3. The script will run automatically according to your calendar schedule
+
+**Note:** The script will still require manual login to Craigslist the first time it runs in each session.
 
 ## What Happens During Reposting
 
