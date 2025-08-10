@@ -647,8 +647,8 @@ try:
 			print(f"DEBUG: category_slug = {categorySlug}")
 			print(f"DEBUG: borough_slug = {boroughSlug}")
 
-			post_url = f"{cityURL}/{boroughSlug}/{categorySlug}/d/{post['title_slug']}/{post['id']}.html"
-			title, price, body, images, condition = extractPostData(post_url)
+			postURL = f"{cityURL}/{boroughSlug}/{categorySlug}/d/{post['title_slug']}/{post['id']}.html"
+			title, price, body, images, condition = extractPostData(postURL)
 			time.sleep(1)
 			if DO_DELETE:
 				delPost(post['id'])
