@@ -141,7 +141,7 @@ def loadConfig():
 		return yaml.safe_load(f)
 
 config = loadConfig()
-city_url = config["city_url"]
+cityURL = config["city_url"]
 posts = config["posts"]
 email = config["email"]
 
@@ -151,18 +151,18 @@ wait = WebDriverWait(driver, 15)
 def extractPostIdFromHTML(html):
 	soup = BeautifulSoup(html, 'html.parser')
 
-	html_lower = html.lower()
-	if "view your post at" in html_lower:
+	htmlLower = html.lower()
+	if "view your post at" in htmlLower:
 		print("DEBUG: Found 'view your post at' text in HTML")
 		# Find all <a> tags and find the one that comes after "View your post at"
-		a_tags = soup.find_all("a")
-		for a_tag in a_tags:
-			href = a_tag.get('href', '')
+		aTags = soup.find_all("a")
+		for aTag in aTags:
+			href = aTag.get('href', '')
 			# Check if this href contains post ID
 			if re.search(r'/(\d+)\.html', href):
-				parent_text = a_tag.parent.get_text().lower() if a_tag.parent else ""
+				parent_text = aTag.parent.get_text().lower() if aTag.parent else ""
 				if "view your post at" in parent_text:
-					print(f"DEBUG: Found matching a_tag = {a_tag}")
+					print(f"DEBUG: Found matching a_tag = {aTag}")
 					print(f"DEBUG: href = {href}")
 					match = re.search(r'/(\d+)\.html', href)
 					if match:
@@ -175,39 +175,38 @@ def extractPostIdFromHTML(html):
 	return ""
 
 # id_pairs: List of (oldId, newId) pairs as strings
-def updateConfig(id_pairs):
+def updateConfig(idPairs):
 	nUpdated = 0
 	with open(CONFIG_YAML, 'r') as f:
 		config = yaml.safe_load(f)
 
 	# Make a mapping for fast lookup
-	id_map = {old: new for old, new in id_pairs}
+	idMap = {old: new for old, new in idPairs}
 
 	for post in config.get("posts", []):
-		post_id_str = str(post.get("id"))
-		if post_id_str in id_map:
-			# All entries in id_map are successful posts
-			post["id"] = id_map[post_id_str]
+		strPostId = str(post.get("id"))
+		if strPostId in idMap:
+			post["id"] = idMap[strPostId]
 			nUpdated += 1
 
 	# Manually construct YAML with unquoted IDs
-	yaml_lines = []
-	yaml_lines.append(f"city_url: {config['city_url']}")
-	yaml_lines.append(f"email: {config['email']}")
-	yaml_lines.append("posts:")
+	yamlLines = []
+	yamlLines.append(f"city_url: {config['city_url']}")
+	yamlLines.append(f"email: {config['email']}")
+	yamlLines.append("posts:")
 
 	for post in config.get("posts", []):
-		yaml_lines.append("- id: " + str(post["id"]))  # Unquoted ID
-		yaml_lines.append(f"  title_slug: {post['title_slug']}")
-		yaml_lines.append(f"  category: {post['category']}")
-		yaml_lines.append(f"  area: {post['area']}")
-		yaml_lines.append(f"  postal: {post['postal']}")
+		yamlLines.append("- id: " + str(post["id"]))  # Unquoted ID
+		yamlLines.append(f"  title_slug: {post['title_slug']}")
+		yamlLines.append(f"  category: {post['category']}")
+		yamlLines.append(f"  area: {post['area']}")
+		yamlLines.append(f"  postal: {post['postal']}")
 
 	with open(CONFIG_YAML, 'w') as f:
-		f.write("\n".join(yaml_lines) + "\n")
+		f.write("\n".join(yamlLines) + "\n")
 
 	if nUpdated > 0:
-		print(f"DEBUG: {CONFIG_YAML} updated successfully: {nUpdated} IDs updated.")
+		print(f"✅SUCCESS: {CONFIG_YAML} updated successfully: {nUpdated} IDs updated.")
 	else:
 		print(f"DEBUG: Did not update {CONFIG_YAML}.")
 
@@ -224,30 +223,30 @@ def login():
 		print("ERROR: Timed out waiting for manual login.")
 		raise
 
-def extractPostData(post_url):
-	res = requests.get(post_url)
+def extractPostData(postURL):
+	res = requests.get(postURL)
 	soup = BeautifulSoup(res.text, "html.parser")
-	print(f"DEBUG: Fetching {post_url}")
+	print(f"DEBUG: Fetching {postURL}")
 
-	title_tag = soup.find("span", id="titletextonly")
-	if not title_tag:
-		raise Exception(f"Could not find title for post at {post_url}")
-	title = title_tag.text.strip()
+	titleTag = soup.find("span", id="titletextonly")
+	if not titleTag:
+		raise Exception(f"Could not find title for post at {postURL}")
+	title = titleTag.text.strip()
 	print(f"DEBUG: Got title {title}")
 
-	price_tag = soup.find("span", class_="price")
-	price = price_tag.text.strip().replace("$", "").replace(",", "") if price_tag else ""
+	priceTag = soup.find("span", class_="price")
+	price = priceTag.text.strip().replace("$", "").replace(",", "") if priceTag else ""
 	print(f"DEBUG: Got price ${price}")
 
-	body_elem = soup.find("section", id="postingbody")
-	if not body_elem:
-		raise Exception(f"Could not find body for post at {post_url}")
-	body = body_elem.get_text("\n").strip().replace("QR Code Link to This Post", "").strip()
-	print(f"DEBUG: Got body text starting w/:\t{body[0:40]}...")
+	bodyElem = soup.find("section", id="postingbody")
+	if not bodyElem:
+		raise Exception(f"Could not find body for post at {postURL}")
+	body = bodyElem.get_text("\n").strip().replace("QR Code Link to This Post", "").strip()
+	print(f"DEBUG: Got body text starting w/:\t{body[0:60]}...")
 
 	try:
-		condition_elem = soup.find("span", class_="valu")
-		condition = condition_elem.get_text("\n").strip() # Condition of the item (new, used, etc.)
+		conditionElem = soup.find("span", class_="valu")
+		condition = conditionElem.get_text("\n").strip() # Condition of the item (new, used, etc.)
 		print(f"DEBUG: Got item condition {condition}")
 	except Exception:
 		condition = ""
@@ -260,9 +259,9 @@ def extractPostData(post_url):
 		if script.string and "imgList" in script.string:
 			try:
 				# Extract the JSON array from the JS assignment
-				img_json = script.string.split("var imgList = ", 1)[1].split(";", 1)[0]
-				img_list = json.loads(img_json)
-				for img in img_list:
+				imgJSON = script.string.split("var imgList = ", 1)[1].split(";", 1)[0]
+				imgList = json.loads(imgJSON)
+				for img in imgList:
 					if "url" in img:
 						images.append(img["url"])
 				print(f"DEBUG: Extracted {len(images)} images from imgList")
@@ -272,20 +271,20 @@ def extractPostData(post_url):
 			break
 	# Fallback: scrape <img> tags in the gallery
 	if not images:
-		for img_tag in soup.select("figure.iw img, div.swipe-wrap img"):
-			img_url = img_tag.get("src")
-			if img_url and img_url.startswith("http"):
-				images.append(img_url)
+		for imgTag in soup.select("figure.iw img, div.swipe-wrap img"):
+			imgURL = imgTag.get("src")
+			if imgURL and imgURL.startswith("http"):
+				images.append(imgURL)
 		print(f"DEBUG: Fallback extracted {len(images)} images from <img> tags")
 	return title, price, body, images, condition
 
-def delPost(post_id):
-	print(f"DEBUG: delPost({post_id})")
+def delPost(postId):
+	print(f"DEBUG: delPost({postId})")
 	driver.get(URL_DEL_POST)
 	wait = WebDriverWait(driver, 10)
 	try:
 		wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "form.manage.delete")))
-		form = driver.find_element(By.CSS_SELECTOR, f"form.manage.delete[data-posting-id='{post_id}']")
+		form = driver.find_element(By.CSS_SELECTOR, f"form.manage.delete[data-posting-id='{postId}']")
 		delete_button = form.find_element(By.CSS_SELECTOR, "input[type='submit'][value='delete']")
 		delete_button.click()
 		try:
@@ -296,9 +295,9 @@ def delPost(post_id):
 			confirm_button.click()
 		except Exception:
 			pass
-		print(f"DEBUG: Post {post_id} deleted.")
+		print(f"DEBUG: Post {postId} deleted.")
 	except Exception as e:
-		print(f"WARNING: Failed to delete post {post_id}: {e}")
+		print(f"WARNING: Failed to delete post {postId}: {e}")
 
 def downloadImage(url):
 	res = requests.get(url)
@@ -340,9 +339,9 @@ def postAd(post, title, price, body, images, condition):
 	print(driver.page_source[:1000])
 
 	done = False
-	max_steps = 20
+	maxSteps = 20
 	steps = 0
-	while not done and steps < max_steps:
+	while not done and steps < maxSteps:
 		steps += 1
 		time.sleep(2)
 		page = driver.page_source.lower()
@@ -363,13 +362,13 @@ def postAd(post, title, price, body, images, condition):
 		try:
 			radios = driver.find_elements(By.CSS_SELECTOR, "input[type='radio']")
 			labels = [r.find_element(By.XPATH, "..") for r in radios]
-			label_texts = [l.text.strip().lower() for l in labels]
-			area_key = post.get('area', '').lower()
-			area_label = AREA_MAP.get(area_key, area_key).lower()
-			if any(area_label == t for t in label_texts):
+			labelTexts = [l.text.strip().lower() for l in labels]
+			areaKey = post.get('area', '').lower()
+			areaLabel = AREA_MAP.get(areaKey, areaKey).lower()
+			if any(areaLabel == t for t in labelTexts):
 				print("DEBUG: Detected subarea/borough selection screen")
-				for radio, label in zip(radios, label_texts):
-					if label == area_label:
+				for radio, label in zip(radios, labelTexts):
+					if label == areaLabel:
 						radio.click()
 						break
 				else:
@@ -383,7 +382,7 @@ def postAd(post, title, price, body, images, condition):
 			if "what type of posting is this" in driver.page_source.lower():
 				radios = driver.find_elements(By.CSS_SELECTOR, "input[type='radio']")
 				if len(radios) >= 6:
-					radios[5].click()
+					radios[5].click() # MAGIC NUMBER: but this is unlikely to change
 					print("DEBUG: Clicked 5th radio button (for sale by owner)")
 				elif radios:
 					radios[0].click()
@@ -396,48 +395,48 @@ def postAd(post, title, price, body, images, condition):
 		try:
 			if "please choose a category" in driver.page_source.lower():
 				radios = driver.find_elements(By.CSS_SELECTOR, 'input[type="radio"]')
-				if len(radios) > CATEGORY_TO_ZBPOS[post['category']]:
-					#radios[21].click()
-					radios[CATEGORY_TO_ZBPOS[post['category']]].click()
-					print("DEBUG: Clicked 21st radio button on category page")
+				radioZbPos = CATEGORY_TO_ZBPOS[post['category']]
+				if len(radios) > radioZbPos:
+					radios[radioZbPos].click()
+					print(f"DEBUG: Clicked radio {radioZbPos+1} (one-based) button on category page corresponding to {post['category']}")
 				elif radios:
 					radios[0].click()
-					print("DEBUG: Fewer than 21 radios, clicked first available radio as fallback")
+					print(f"DEBUG: Fewer than {radioZbPos} radios, clicked first available radio as fallback")
 				driver.find_element(By.NAME, "go").click()
 				continue
 		except Exception:
 			pass
 		# 5. Post details (title, price, body fields, condition)
 		try:
-			title_input = driver.find_element(By.NAME, "PostingTitle")
-			if title_input:
+			titleInput = driver.find_element(By.NAME, "PostingTitle")
+			if titleInput:
 				print("DEBUG: Detected post details screen")
-				title_input.clear()
-				title_input.send_keys(title)
+				titleInput.clear()
+				titleInput.send_keys(title)
 				# Fill ZIP code in any possible field
-				zip_filled = False
+				isZipFilled = False
 				try:
-					zip_input = driver.find_element(By.NAME, "postal")
-					zip_input.clear()
-					zip_input.send_keys(str(post.get("postal", DEFAULT_ZIP)))
+					zipInput = driver.find_element(By.NAME, "postal")
+					zipInput.clear()
+					zipInput.send_keys(str(post.get("postal", DEFAULT_ZIP)))
 					print("DEBUG: Filled ZIP code in 'postal' field")
-					zip_filled = True
+					isZipFilled = True
 				except Exception:
 					pass
-				if not zip_filled:
+				if not isZipFilled:
 					try:
-						zip_input = driver.find_element(By.NAME, "postal_code")
-						zip_input.clear()
-						zip_input.send_keys(str(post.get("postal", DEFAULT_ZIP)))
+						zipInput = driver.find_element(By.NAME, "postal_code")
+						zipInput.clear()
+						zipInput.send_keys(str(post.get("postal", DEFAULT_ZIP)))
 						print("DEBUG: Filled ZIP code in 'postal_code' field")
-						zip_filled = True
+						isZipFilled = True
 					except Exception:
 						print("DEBUG: No ZIP/postal field found to fill")
 				# Fill email field if present
 				try:
-					email_input = driver.find_element(By.NAME, "FromEMail")
-					email_input.clear()
-					email_input.send_keys(email)
+					emailInput = driver.find_element(By.NAME, "FromEMail")
+					emailInput.clear()
+					emailInput.send_keys(email)
 					print("DEBUG: Filled email in 'FromEMail' field")
 				except Exception:
 					print("DEBUG: No email field found to fill")
@@ -451,21 +450,21 @@ def postAd(post, title, price, body, images, condition):
 
 				# Fill condition (used, new, etc.) field if present
 				if condition == "":
-					print(f"DEBUG: No condition provided, so won't be filled")
+					print(f"DEBUG: No condition provided, so field won't be filled")
 				else:
 					print(f"DEBUG: Condition = {condition}")
 					try:
-						aria_id = f"ui-id-{CONDITION_MAP[condition]}"
+						ariaId = f"ui-id-{CONDITION_MAP[condition]}"
 
-						dropdown_button = wait.until(EC.element_to_be_clickable((By.ID, "ui-id-1-button")))
-						dropdown_button.click()
+						dropdownBtn = wait.until(EC.element_to_be_clickable((By.ID, "ui-id-1-button")))
+						dropdownBtn.click()
 
 						# Wait for menu to appear
 						wait.until(EC.visibility_of_element_located((By.ID, "ui-id-1-menu")))
 
 						# Click the correct option
-						li_option = wait.until(EC.element_to_be_clickable((By.ID, aria_id)))
-						li_option.click()
+						liOption = wait.until(EC.element_to_be_clickable((By.ID, ariaId)))
+						liOption.click()
 						print("DEBUG: Selected condition:", condition)
 					except Exception as e:
 						print(f"ERROR: Problem with condition: {e}")
@@ -502,33 +501,33 @@ def postAd(post, title, price, body, images, condition):
 			pass
 		# 6.5. Map screen (geoverify)
 		try:
-			leaflet_form = driver.find_element(By.ID, "leafletForm")
-			zip_input = None
+			leafletForm = driver.find_element(By.ID, "leafletForm")
+			zipInput = None
 			try:
-				zip_input = driver.find_element(By.NAME, "postal")
+				zipInput = driver.find_element(By.NAME, "postal")
 			except Exception:
 				try:
-					zip_input = driver.find_element(By.NAME, "postal_code")
+					zipInput = driver.find_element(By.NAME, "postal_code")
 				except Exception:
 					pass
-			if leaflet_form and zip_input:
+			if leafletForm and zipInput:
 				print("DEBUG: Detected map/geoverify screen")
-				zip_input.clear()
-				zip_input.send_keys(str(post.get("postal", DEFAULT_ZIP)))
+				zipInput.clear()
+				zipInput.send_keys(str(post.get("postal", DEFAULT_ZIP)))
 				# Optionally fill cross streets/city if needed
 				try:
-					city_input = driver.find_element(By.NAME, "city")
-					city_input.clear()
-					city_input.send_keys("New York")
+					cityInput = driver.find_element(By.NAME, "city")
+					cityInput.clear()
+					cityInput.send_keys("New York")
 				except Exception:
 					pass
 				# Click the 'continue' button (not 'find')
 				try:
-					submit_buttons = leaflet_form.find_elements(By.CSS_SELECTOR, "button[type='submit'], .continue")
+					submitButtons = leafletForm.find_elements(By.CSS_SELECTOR, "button[type='submit'], .continue")
 					clicked = False
-					for btn in submit_buttons:
-						btn_text = btn.text.strip().lower()
-						if btn_text == "continue":
+					for btn in submitButtons:
+						btnText = btn.text.strip().lower()
+						if btnText == "continue":
 							btn.click()
 							clicked = True
 							print("DEBUG: Clicked 'continue' button on map screen")
@@ -544,24 +543,24 @@ def postAd(post, title, price, body, images, condition):
 		try:
 			if "images of a maximum 24" in driver.page_source.lower():
 				print("DEBUG: Detected image upload screen (by text)")
-				file_inputs = driver.find_elements(By.CSS_SELECTOR, 'input[type="file"][multiple]')
-				if file_inputs:
-					file_input = file_inputs[0]
-					local_images = []
-					for img_url in images[:8]:
-						local_path = downloadImage(img_url)
-						local_images.append(local_path)
-					for img_path in local_images:
-						file_input.send_keys(img_path)
-						print(f"DEBUG: Uploaded image {img_path}")
+				fileInputs = driver.find_elements(By.CSS_SELECTOR, 'input[type="file"][multiple]')
+				if fileInputs:
+					fileInput = fileInputs[0]
+					localImages = []
+					for imgURL in images[:8]:
+						localPath = downloadImage(imgURL)
+						localImages.append(localPath)
+					for imgPath in localImages:
+						fileInput.send_keys(imgPath)
+						print(f"DEBUG: Uploaded image {imgPath}")
 						time.sleep(2)
 				else:
 					print("DEBUG: No file input found on image upload screen")
 				# Click the 'done with images' button to proceed
 				time.sleep(2)
 				try:
-					done_btn = driver.find_element(By.ID, "doneWithImages")
-					done_btn.click()
+					doneBtn = driver.find_element(By.ID, "doneWithImages")
+					doneBtn.click()
 					print("DEBUG: Clicked 'done with images' button")
 				except Exception:
 					print("DEBUG: Could not find 'done with images' button, trying to submit form")
@@ -613,12 +612,12 @@ try:
 	for post in posts:
 		try:
 			# convert user-friendly string to slug (ex: Musical instruments -> msg, Brooklyn -> brk)
-			category_slug = CATEGORY_TO_SLUG[post['category'].lower()]
-			borough_slug = BOROUGH_TO_SLUG[post['area'].lower()]
-			print(f"DEBUG: category_slug = {category_slug}")
-			print(f"DEBUG: borough_slug = {borough_slug}")
+			categorySlug = CATEGORY_TO_SLUG[post['category'].lower()]
+			boroughSlug = BOROUGH_TO_SLUG[post['area'].lower()]
+			print(f"DEBUG: category_slug = {categorySlug}")
+			print(f"DEBUG: borough_slug = {boroughSlug}")
 
-			post_url = f"{city_url}/{borough_slug}/{category_slug}/d/{post['title_slug']}/{post['id']}.html"
+			post_url = f"{cityURL}/{boroughSlug}/{categorySlug}/d/{post['title_slug']}/{post['id']}.html"
 			title, price, body, images, condition = extractPostData(post_url)
 			time.sleep(1)
 			if DO_DELETE:
@@ -629,13 +628,13 @@ try:
 			if newId != "":
 				idPairs.append((oldId, newId))
 			else:
-				print(f"DEBUG: Post {oldId} failed to repost, skipping config update")
+				print(f"ERROR: Post {oldId} failed to repost. Will leave config as-is for this post.")
 		except Exception as e:
 			print(f"ERROR: Failed to process post {post.get('id', 'unknown')}: {e}")
 			continue
 
 	print(f"DEBUG: Updating {CONFIG_YAML} with new post IDs:")
 	print(f"DEBUG: idPairs = {idPairs}")
-	updateConfig(idPairs) # Replace old ID with new ID in config file to allow for re-reposting
+	updateConfig(idPairs)
 finally:
 	driver.quit()
