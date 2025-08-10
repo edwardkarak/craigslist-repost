@@ -10,9 +10,13 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select
 import json
 import re
+import sounddevice as sd
+import librosa
 
-# Should be True in production!
-DO_DELETE = True
+DO_DELETE = True # should be True in production!
+DO_PLAY_INTRO_SOUND = True
+N_REP_SOUND = 4 # Number of times to repeat intro sound
+INTRO_SOUND_FILE = "tada.wav"
 
 CATEGORY_TO_ZBPOS = {
 	"antiques": 0,
@@ -136,6 +140,21 @@ URL_POST_AD = "https://post.craigslist.org/c"
 
 CONFIG_YAML = "config.yml"
 
+HTML_DUMP_TRIM_MAX_CHARS = 500
+TITLE_DEBUG_TRIM_MAX_CHARS = 60
+MAX_IMAGES = 8
+
+def playIntroSound():
+	try:
+		y, sr = librosa.load(INTRO_SOUND_FILE)
+		for i in range(0,N_REP_SOUND):
+			sd.play(y, sr)
+			sd.wait()
+	except ImportError:
+		print("ERROR: sounddevice not installed, skipping audio playback")
+	except Exception as e:
+		print(f"ERROR: Could not play intro sound: {e}")
+
 def loadConfig():
 	with open(CONFIG_YAML) as f:
 		return yaml.safe_load(f)
@@ -171,7 +190,7 @@ def extractPostIdFromHTML(html):
 						return post_id
 	else:
 		print(f"DEBUG: Could not find 'view your post at' text in HTML")
-		print(f"DUMP: HTML snippet: {html[:1000]}")
+		print(f"DUMP: HTML snippet: {html[:HTML_DUMP_TRIM_MAX_CHARS]}")
 	return ""
 
 # id_pairs: List of (oldId, newId) pairs as strings
@@ -242,7 +261,7 @@ def extractPostData(postURL):
 	if not bodyElem:
 		raise Exception(f"Could not find body for post at {postURL}")
 	body = bodyElem.get_text("\n").strip().replace("QR Code Link to This Post", "").strip()
-	print(f"DEBUG: Got body text starting w/:\t{body[0:60]}...")
+	print(f"DEBUG: Got body text starting w/:\t{body[:TITLE_DEBUG_TRIM_MAX_CHARS]}...")
 
 	try:
 		conditionElem = soup.find("span", class_="valu")
@@ -336,7 +355,7 @@ def postAd(post, title, price, body, images, condition):
 		x = input("")
 
 	print(f"DEBUG: Loaded post URL, URL: {driver.current_url}") # why is this the manage page?
-	print(driver.page_source[:1000])
+	print(driver.page_source[:HTML_DUMP_TRIM_MAX_CHARS])
 
 	done = False
 	maxSteps = 20
@@ -547,7 +566,7 @@ def postAd(post, title, price, body, images, condition):
 				if fileInputs:
 					fileInput = fileInputs[0]
 					localImages = []
-					for imgURL in images[:8]:
+					for imgURL in images[:MAX_IMAGES]:
 						localPath = downloadImage(imgURL)
 						localImages.append(localPath)
 					for imgPath in localImages:
@@ -592,20 +611,23 @@ def postAd(post, title, price, body, images, condition):
 			done = True
 			retval = extractPostIdFromHTML(page)
 			print("✅SUCCESS: Detected success screen. Posting complete")
-			print(f"DEBUG: Page = {page}")
+			print(f"DEBUG: Page = {page[:HTML_DUMP_TRIM_MAX_CHARS]}")
 			print(f"DEBUG: retval = {retval}")
 			return retval
 		# 10. Fallback: unknown screen
 		print("DEBUG: Unknown screen, dumping page source")
-		print(driver.page_source[:5000])
+		print(driver.page_source[:HTML_DUMP_TRIM_MAX_CHARS])
 		time.sleep(2)
 		break
 	if not done:
 		print("ERROR: Failed to complete posting flow. See debug output above.")
 	return ""
 
+# START HERE
 idPairs = []
 try:
+	if DO_PLAY_INTRO_SOUND:
+		playIntroSound()
 	login()
 	print(f"DEBUG: Num of posts = {len(posts)}")
 
