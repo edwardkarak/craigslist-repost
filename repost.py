@@ -12,13 +12,14 @@ import json
 import re
 import sounddevice as sd
 import librosa
+import threading
 
 DO_DELETE = True # should be True in production!
 CONFIG_YAML = "config.yml"
 
 DO_PLAY_INTRO_SOUND = True
-N_REP_SOUND = 4 # Number of times to repeat intro sound
-INTRO_SOUND_FILE = "tada.wav"
+N_REP_SOUND = 2 # Number of times to repeat intro sound
+INTRO_SOUND_FILE = "long.wav" # Set to long.wav if you want to hear the full song, or short.wav if you don't
 
 CATEGORY_TO_ZBPOS = {
 	"antiques": 0,
@@ -140,7 +141,8 @@ URL_LOGIN = "https://accounts.craigslist.org/login?rp=%2Flogin%2Fhome&rt=L"
 URL_DEL_POST = "https://accounts.craigslist.org/login?rp=%2Flogin%2Fhome&rt=L"
 URL_POST_AD = "https://post.craigslist.org/c"
 
-LOGIN_WAIT_SECONDS = 600 # 10 mins
+USER_LOGIN_MAX_WAIT_SECONDS = 10800  # 3 hours
+USER_LOGIN_POLL_INTERVAL_SECONDS = 15
 MAX_POST_AD_STEPS = 20
 HTML_DUMP_TRIM_MAX_CHARS = 500
 TITLE_DEBUG_TRIM_MAX_CHARS = 60
@@ -233,16 +235,28 @@ def updateConfig(idPairs):
 
 def login():
 	driver.get(URL_LOGIN)
-	print("Waiting for user to log in manually in the browser window, including solving any captcha if present...")
+	print("Waiting for user to log in manually in browser, including solving any captcha if present...")
+	secsStart = time.time()
 	try:
-		# Wait until the account home page is loaded (look for a known element)
-		WebDriverWait(driver, LOGIN_WAIT_SECONDS).until(
-			EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/logout']"))
-		)
-		print("DEBUG: Login detected, proceeding...")
-	except Exception:
-		print(f"ERROR: Timed out waiting {LOGIN_WAIT_SECONDS} secs for manual login.")
-		raise
+		while True:
+			try:
+				driver.find_element(By.CSS_SELECTOR, "a[href*='/logout']")
+				print("DEBUG: Login detected, proceeding...")
+				break
+			except Exception as e:
+				pass # not logged in yet, keep waiting
+
+			secsElapsed = time.time() - secsStart
+			if secsElapsed > USER_LOGIN_MAX_WAIT_SECONDS:
+				print(f"ERROR: Timed out waiting for manual login.")
+				exit(1)
+			else:
+				print(f"DEBUG: Waiting for user to log in. Elapsed {int(secsElapsed)} secs...")
+				time.sleep(USER_LOGIN_POLL_INTERVAL_SECONDS)
+	except Exception as e:
+		print(f"ERROR: Unexpected error in login poll loop: {e}. Quitting...")
+		driver.quit()
+		exit(1)
 
 def extractPostData(postURL):
 	res = requests.get(postURL)
@@ -302,20 +316,24 @@ def extractPostData(postURL):
 def delPost(postId):
 	print(f"DEBUG: delPost({postId})")
 	driver.get(URL_DEL_POST)
+	print(f"DEBUG: In {URL_DEL_POST}")
 	wait = WebDriverWait(driver, 10)
 	try:
 		wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "form.manage.delete")))
 		form = driver.find_element(By.CSS_SELECTOR, f"form.manage.delete[data-posting-id='{postId}']")
 		delBtn = form.find_element(By.CSS_SELECTOR, "input[type='submit'][value='delete']")
+		print(f"DEBUG: delBtn.text = {delBtn.text}")
 		delBtn.click()
-		try:
+		# TODO: delete this commented out code?
+		"""try:
 			confirmBtn = wait.until(EC.element_to_be_clickable((By.NAME, "go")))
 			# Don't want to undo the delete
-			if confirmBtn.text == "Undelete this Posting":
+			if confirmBtn.text.lower() == "undelete this posting" or confirmBtn.accessible_name.lower() == "undelete this posting":
 				return
 			confirmBtn.click()
 		except Exception:
 			pass
+		"""
 		print(f"DEBUG: Post {postId} deleted.")
 	except Exception as e:
 		print(f"❌ERROR: Failed to delete post {postId}: {e}")
@@ -573,7 +591,7 @@ def postAd(post, title, price, body, images, condition):
 					for imgPath in localImages:
 						fileInput.send_keys(imgPath)
 						print(f"DEBUG: Uploaded image {imgPath}")
-						time.sleep(2)
+						time.sleep(3)
 
 					for imgPath in localImages:
 						try:
@@ -584,7 +602,7 @@ def postAd(post, title, price, body, images, condition):
 				else:
 					print("DEBUG: No file input found on image upload screen")
 				# Click the 'done with images' button to proceed
-				time.sleep(2)
+				time.sleep(3)
 				try:
 					doneBtn = driver.find_element(By.ID, "doneWithImages")
 					doneBtn.click()
@@ -635,7 +653,7 @@ def postAd(post, title, price, body, images, condition):
 idPairs = []
 try:
 	if DO_PLAY_INTRO_SOUND:
-		playIntroSound()
+		threading.Thread(target=playIntroSound, daemon=True).start()
 	login()
 	print(f"DEBUG: Num of posts = {len(posts)}")
 
@@ -649,11 +667,11 @@ try:
 
 			postURL = f"{cityURL}/{boroughSlug}/{categorySlug}/d/{post['title_slug']}/{post['id']}.html"
 			title, price, body, images, condition = extractPostData(postURL)
-			time.sleep(1)
+			time.sleep(3)
 			if DO_DELETE:
 				delPost(post['id'])
 			oldId = str(post['id'])
-			time.sleep(2)
+			time.sleep(3)
 			newId = postAd(post, title, price, body, images, condition)
 			if newId != "":
 				idPairs.append((oldId, newId))

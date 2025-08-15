@@ -116,7 +116,7 @@ Craigslist uses the title slug + the ID to uniquely identify your post. It needs
 
 ### Step 1
 #### Option 1: Automated Scheduling (Recommended)
-Set up automated scheduling by following the steps in "Automated Scheduling (macOS)" section below. Now, you can repost the same ads, for example, daily at 7AM, keeping your posts at the top. The script will run automatically at regular intervals.
+Set up automated scheduling by following the steps in "Automated Scheduling (macOS)" section below. Now, you can repost the same ads, for example, daily at 7AM, keeping your posts at the top. The script will run automatically at regular intervals. Also a song will play to let you know you need to log in. I have it play to the end so you can listen to it. I don't know what the song is called. If you want to keep it short, replace "long.wav" with "short.wav" in the `repost.py` file.
 
 #### Option 2: Manual Execution
 If you want to run the script manually:
@@ -174,7 +174,7 @@ cd -
 ### Step 2: Set Up Calendar Event
 
 1. Open **Calendar** app
-2. Create a new event
+2. Create a new event. Set the start time of the event to the time (ex: 7:30 AM) you want the reposting to happen. The end time doesn't matter, so you can set it to any time after the start time.
 3. Set the event to repeat at your desired interval (e.g., daily, weekly)
 4. In the event details, click **"Add Alert"**
 5. Choose **"Custom"** and select **"Open File"**
