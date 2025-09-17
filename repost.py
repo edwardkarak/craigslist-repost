@@ -17,8 +17,7 @@ import threading
 DO_DELETE = True # should be True in production!
 CONFIG_YAML = "config.yml"
 
-DO_PLAY_INTRO_SOUND = True
-N_REP_SOUND = 2 # Number of times to repeat intro sound
+N_REP_SOUND = 2 # Number of times to repeat intro sound; set to 0 to disable
 INTRO_SOUND_FILE = "long.wav" # Set to long.wav if you want to hear the full song, or short.wav if you don't
 
 CATEGORY_TO_ZBPOS = {
@@ -150,15 +149,16 @@ MAX_IMAGES = 8 # TODO: increase, real max is 24
 TEMP_IMAGES_LOCATION = "/tmp"
 
 def playIntroSound():
-	try:
-		y, sr = librosa.load(INTRO_SOUND_FILE)
-		for i in range(0,N_REP_SOUND):
-			sd.play(y, sr)
-			sd.wait()
-	except ImportError:
-		print("ERROR: sounddevice not installed, skipping audio playback")
-	except Exception as e:
-		print(f"ERROR: Could not play intro sound: {e}")
+	if N_REP_SOUND > 0:
+		try:
+			y, sr = librosa.load(INTRO_SOUND_FILE)
+			for i in range(0,N_REP_SOUND):
+				sd.play(y, sr)
+				sd.wait()
+		except ImportError:
+			print("ERROR: sounddevice not installed, skipping audio playback")
+		except Exception as e:
+			print(f"ERROR: Could not play intro sound: {e}")
 
 def loadConfig():
 	with open(CONFIG_YAML) as f:
@@ -652,7 +652,7 @@ def postAd(post, title, price, body, images, condition):
 # START HERE
 idPairs = []
 try:
-	if DO_PLAY_INTRO_SOUND:
+	if N_REP_SOUND > 0:
 		threading.Thread(target=playIntroSound, daemon=True).start()
 	login()
 	print(f"DEBUG: Num of posts = {len(posts)}")
