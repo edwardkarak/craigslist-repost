@@ -17,8 +17,8 @@ import threading
 DO_DELETE = True # should be True in production!
 CONFIG_YAML = "config.yml"
 
-N_REP_SOUND = 2 # Number of times to repeat intro sound; set to 0 to disable
-INTRO_SOUND_FILE = "long.wav" # Set to long.wav if you want to hear the full song, or short.wav if you don't
+N_REP_SOUND = 1 			  # Number of times to repeat intro sound; set to 0 to disable
+INTRO_SOUND_FILE = "SQWOZ_BAB.opus" # Set to long.wav if you want to hear the full song, or short.wav if you don't, or SQWOZ_BAB.opus if you want to hear the nice song
 
 CATEGORY_TO_ZBPOS = {
 	"antiques": 0,
@@ -140,8 +140,6 @@ URL_LOGIN = "https://accounts.craigslist.org/login?rp=%2Flogin%2Fhome&rt=L"
 URL_DEL_POST = "https://accounts.craigslist.org/login?rp=%2Flogin%2Fhome&rt=L"
 URL_POST_AD = "https://post.craigslist.org/c"
 
-USER_LOGIN_MAX_WAIT_SECONDS = 10800  # 3 hours
-USER_LOGIN_POLL_INTERVAL_SECONDS = 15
 MAX_POST_AD_STEPS = 20
 HTML_DUMP_TRIM_MAX_CHARS = 500
 TITLE_DEBUG_TRIM_MAX_CHARS = 60
@@ -170,7 +168,7 @@ posts = config["posts"]
 email = config["email"]
 
 driver = webdriver.Chrome()
-wait = WebDriverWait(driver, 15)
+wait = WebDriverWait(driver, 30)
 
 def extractPostIdFromHTML(html):
 	soup = BeautifulSoup(html, 'html.parser')
@@ -178,7 +176,7 @@ def extractPostIdFromHTML(html):
 	htmlLower = html.lower()
 	if "view your post at" in htmlLower:
 		print("DEBUG: Found 'view your post at' text in HTML")
-		# Find all <a> tags and find the one coming immediately after "View your post at"
+		# Find all <a> tags and find the one immediately after "View your post at"
 		aTags = soup.find_all("a")
 		for aTag in aTags:
 			href = aTag.get('href', '')
@@ -204,7 +202,6 @@ def updateConfig(idPairs):
 	with open(CONFIG_YAML, 'r') as f:
 		config = yaml.safe_load(f)
 
-	# Make a mapping for fast lookup
 	idMap = {old: new for old, new in idPairs}
 
 	for post in config.get("posts", []):
@@ -236,25 +233,12 @@ def updateConfig(idPairs):
 def login():
 	driver.get(URL_LOGIN)
 	print("Waiting for user to log in manually in browser, including solving any captcha if present...")
-	secsStart = time.time()
 	try:
-		while True:
-			try:
-				driver.find_element(By.CSS_SELECTOR, "a[href*='/logout']")
-				print("DEBUG: Login detected, proceeding...")
-				break
-			except Exception as e:
-				pass # not logged in yet, keep waiting
-
-			secsElapsed = time.time() - secsStart
-			if secsElapsed > USER_LOGIN_MAX_WAIT_SECONDS:
-				print(f"ERROR: Timed out waiting for manual login.")
-				exit(1)
-			else:
-				print(f"DEBUG: Waiting for user to log in. Elapsed {int(secsElapsed)} secs...")
-				time.sleep(USER_LOGIN_POLL_INTERVAL_SECONDS)
+		# Wait for logout link to appear, indicating successful login
+		wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/logout']")))
+		print("DEBUG: Login detected, proceeding...")
 	except Exception as e:
-		print(f"ERROR: Unexpected error in login poll loop: {e}. Quitting...")
+		print(f"ERROR: Failed to detect login completion: {e}. Quitting...")
 		driver.quit()
 		exit(1)
 
@@ -286,7 +270,7 @@ def extractPostData(postURL):
 	except Exception:
 		condition = ""
 		print(f"DEBUG: No condition provided")
-		pass # There may not be a condition, skip
+		pass
 
 	images = []
 	# Find the <script> tag containing 'imgList'
@@ -317,7 +301,6 @@ def delPost(postId):
 	print(f"DEBUG: delPost({postId})")
 	driver.get(URL_DEL_POST)
 	print(f"DEBUG: In {URL_DEL_POST}")
-	wait = WebDriverWait(driver, 10)
 	try:
 		wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "form.manage.delete")))
 		form = driver.find_element(By.CSS_SELECTOR, f"form.manage.delete[data-posting-id='{postId}']")
@@ -382,6 +365,10 @@ def postAd(post, title, price, body, images, condition):
 	while not done and steps < MAX_POST_AD_STEPS:
 		steps += 1
 		time.sleep(2)
+		try:
+			wait.until(lambda driver: driver.find_elements(By.TAG_NAME, "body"))
+		except Exception:
+			pass
 		page = driver.page_source.lower()
 		url = driver.current_url
 		print(f"DEBUG: Step {steps}, URL: {url}")
@@ -420,7 +407,7 @@ def postAd(post, title, price, body, images, condition):
 			if "what type of posting is this" in driver.page_source.lower():
 				radios = driver.find_elements(By.CSS_SELECTOR, "input[type='radio']")
 				if len(radios) >= 6:
-					radios[5].click() # MAGIC NUMBER: but this is unlikely to change
+					radios[5].click() # TODO: MAGIC NUMBER: but this is unlikely to change
 					print("DEBUG: Clicked 5th radio button (for sale by owner)")
 				elif radios:
 					radios[0].click()
@@ -497,10 +484,7 @@ def postAd(post, title, price, body, images, condition):
 						dropdownBtn = wait.until(EC.element_to_be_clickable((By.ID, "ui-id-1-button")))
 						dropdownBtn.click()
 
-						# Wait for menu to appear
 						wait.until(EC.visibility_of_element_located((By.ID, "ui-id-1-menu")))
-
-						# Click the correct option
 						liOption = wait.until(EC.element_to_be_clickable((By.ID, ariaId)))
 						liOption.click()
 						print("DEBUG: Selected condition:", condition)
@@ -602,9 +586,9 @@ def postAd(post, title, price, body, images, condition):
 				else:
 					print("DEBUG: No file input found on image upload screen")
 				# Click the 'done with images' button to proceed
-				time.sleep(3)
 				try:
-					doneBtn = driver.find_element(By.ID, "doneWithImages")
+					# Wait for done button to be available
+					doneBtn = wait.until(EC.element_to_be_clickable((By.ID, "doneWithImages")))
 					doneBtn.click()
 					print("DEBUG: Clicked 'done with images' button")
 				except Exception:
@@ -643,7 +627,10 @@ def postAd(post, title, price, body, images, condition):
 		# 10. Fallback: unknown screen
 		print("DEBUG: Unknown screen, dumping page source")
 		print(driver.page_source[:HTML_DUMP_TRIM_MAX_CHARS])
-		time.sleep(2)
+		try:
+			wait.until(lambda driver: driver.find_elements(By.TAG_NAME, "body"))
+		except Exception:
+			pass  # Continue if body element check fails
 		break
 	if not done:
 		print("ERROR: Failed to complete posting flow. See debug output above.")
