@@ -364,7 +364,7 @@ def postAd(post, title, price, body, images, condition):
 	steps = 0
 	while not done and steps < MAX_POST_AD_STEPS:
 		steps += 1
-		time.sleep(2)
+		time.sleep(1)
 		try:
 			wait.until(lambda driver: driver.find_elements(By.TAG_NAME, "body"))
 		except Exception:
