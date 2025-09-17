@@ -17,8 +17,10 @@ import threading
 DO_DELETE = True # should be True in production!
 CONFIG_YAML = "config.yml"
 
-N_REP_SOUND = 1 			  # Number of times to repeat intro sound; set to 0 to disable
+N_REP_SOUND = 2 			  # Number of times to repeat intro sound; set to 0 to disable
 INTRO_SOUND_FILE = "SQWOZ_BAB.opus" # Set to long.wav if you want to hear the full song, or short.wav if you don't, or SQWOZ_BAB.opus if you want to hear the nice song
+
+LOGIN_INTERVAL_SECS = 600
 
 CATEGORY_TO_ZBPOS = {
 	"antiques": 0,
@@ -233,12 +235,13 @@ def updateConfig(idPairs):
 def login():
 	driver.get(URL_LOGIN)
 	print("Waiting for user to log in manually in browser, including solving any captcha if present...")
+	print("You have 10 minutes...")
 	try:
-		# Wait for logout link to appear, indicating successful login
-		wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/logout']")))
+		login_wait = WebDriverWait(driver, LOGIN_INTERVAL_SECS)
+		login_wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/logout']")))
 		print("DEBUG: Login detected, proceeding...")
 	except Exception as e:
-		print(f"ERROR: Failed to detect login completion: {e}. Quitting...")
+		print(f"ERROR: Failed to login after 10 minutes: {e}. Quitting...")
 		driver.quit()
 		exit(1)
 

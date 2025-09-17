@@ -1,34 +1,28 @@
 # Craigslist Auto-Reposter
 
-Tool for reposting your Craigslist listings to keep them fresh and visible to potential customers. Perfect for small businesses, real estate agents, and anyone who regularly posts on Craigslist.
+Automatically repost your Craigslist listings to keep them fresh and visible. Perfect for businesses and anyone who regularly posts on Craigslist.
 
-**Note:** This script may break at any moment, if Craigslist updates their UI/layout.
+**Warning:** This tool may stop working if Craigslist changes their website. Always back up your posts before using.
 
-**Important:** Back up your posts before using this tool.
+## Requirements
 
-## Prerequisites
-
-1. **Python 3.7 or higher** installed on your computer
-2. **Google Chrome** installed
-3. **Craigslist account** (free to create at [accounts.craigslist.org](https://accounts.craigslist.org))
+- Python 3.7 or higher
+- Google Chrome
+- Craigslist account (free at [accounts.craigslist.org](https://accounts.craigslist.org))
 
 ## Installation
 
-### Step 1: Download the Tool
-Download all the files in this folder to your computer.
-
-### Step 2: Install Required Software
-Open your terminal/command prompt and run:
+1. Download all files to your computer
+2. Install required packages:
 
 ```bash
 pip install selenium beautifulsoup4 requests pyyaml librosa sounddevice
 ```
-(On macOS, run pip3 instead of pip)
+(Use `pip3` on macOS)
 
-## Setup Instructions
+## Configuration
 
-### Step 1: Configure Your Settings
-Open the `config.yml` file in any text editor (Notepad, etc.) and update it with your information:
+Edit `config.yml` with your information:
 
 ```yaml
 email: "your-email@example.com"
@@ -42,120 +36,77 @@ posts:
     postal: 11201
 ```
 
-**What each field means:**
-- `email`: Your email address (used for contact information)
-- `city_url`: Your local Craigslist city (e.g., "https://newyork.craigslist.org" for NYC)
-- `posts`: List of your posts to repost
-  - `id`: The post ID from your Craigslist listing URL
-  - `category`: The category your post is in (see categories list below)
-  - `area`: Your local area/borough (see areas list below)
-  - `title_slug`: The title slug seen in your post URL. Will be explained below.
+**Field descriptions:**
+- `email`: Your contact email
+- `city_url`: Your local Craigslist city URL
+- `posts`: List of posts to repost
+  - `id`: Post ID from your listing URL
+  - `category`: Post category (see list below)
+  - `area`: Local area/borough (see list below)
+  - `title_slug`: Title slug from your post URL
   - `postal`: Your ZIP code
 
-### Step 2: Find Your Post Information
+## Finding Post Information
 
-**To find your post ID and title slug:**
+**To get your post ID and title slug:**
 1. Go to your Craigslist listing
 2. Look at the URL: `https://newyork.craigslist.org/brk/sys/d/macbook-air-2020/1234567890.html`
 3. The number at the end (1234567890) is your post ID
-4. The string after the d and before the ID (macbook-air-2020) is the title slug.
+4. The text after `/d/` and before the ID (macbook-air-2020) is the title slug
 
-Craigslist uses the title slug + the ID to uniquely identify your post. It needs both.
+Both the title slug and ID are required to identify your post.
 
-**Available Categories:**
-- antiques
-- appliances
-- arts & crafts
-- auto parts
-- baby & kid stuff
-- bicycles
-- books & magazines
-- business/commercial
-- cars & trucks
-- cell phones
-- clothing & accessories
-- collectibles
-- computer parts
-- computers
-- electronics
-- farm & garden
-- free stuff
-- furniture
-- garage & moving sales
-- general for sale
-- health and beauty
-- heavy equipment
-- household items
-- jewelry
-- materials
-- motorcycle parts
-- motorcycles/scooters
-- musical instruments
-- photo/video
-- rvs
-- sporting goods
-- tickets
-- tools
-- toys & games
-- trailers
-- video gaming
-- wanted
+**Categories:**
+antiques, appliances, arts & crafts, auto parts, baby & kid stuff, bicycles, books & magazines, business/commercial, cars & trucks, cell phones, clothing & accessories, collectibles, computer parts, computers, electronics, farm & garden, free stuff, furniture, garage & moving sales, general for sale, health and beauty, heavy equipment, household items, jewelry, materials, motorcycle parts, motorcycles/scooters, musical instruments, photo/video, rvs, sporting goods, tickets, tools, toys & games, trailers, video gaming, wanted
 
-**Available Areas (for NYC):**
-- manhattan
-- brooklyn
-- queens
-- bronx
-- staten island
-- new jersey
-- long island
-- westchester
-- fairfield co, CT
+**NYC Areas:**
+manhattan; brooklyn, queens, bronx, staten island, new jersey, long island, westchester, fairfield co (Connecticut)
 
-## How to Use
+## Usage
 
-### Step 1
-#### Option 1: Automated Scheduling (Recommended)
-Set up automated scheduling by following the steps in "Automated Scheduling (macOS)" section below. Now, you can repost the same ads, for example, daily at 7AM, keeping your posts at the top. The script will run automatically at regular intervals. Also a song by SQWOZ BAB (called Ой) will play to let you know you need to log in. I have it play to the end so you can listen to it. If you want to keep it short, replace "SQWOZ_BAB.opus" with "short.wav" in the `repost.py` file.
+### Option 1: Automated Scheduling (Recommended)
+Set up automated scheduling using the "Automated Scheduling" section below. The script will run automatically at regular intervals (e.g., daily at 7AM) to keep your posts at the top.
 
-#### Option 2: Manual Execution
-If you want to run the script manually:
+### Option 2: Manual Execution
+Run the script manually:
 
-1. Open your terminal/command prompt, navigate to the folder with the tool, and run:
+1. Open terminal/command prompt
+2. Navigate to the tool folder
+3. Run:
 ```bash
 python repost.py
 ```
-(on macOS, run python3 instead of python)
+(Use `python3` on macOS)
 
-### Step 2: Log In to Craigslist
+## Login Process
 When the tool starts:
-1. A Chrome browser window will open
-2. You'll be taken to the Craigslist login page
-3. Manually log in to your Craigslist account
-4. If there's a CAPTCHA, solve it manually
-5. Wait for the tool to detect your successful login
+1. Chrome browser opens automatically
+2. Navigate to Craigslist login page
+3. Log in to your account manually
+4. Solve any CAPTCHA if prompted
+5. Wait for the tool to detect successful login
 
-### Step 3: Let It Work
-The tool will automatically:
-1. Find each of your posts using the IDs you provided
-2. Extract all the content (title, price, description, images)
-3. Delete the old post
-4. Create a new post with the same content
-5. Move to the next post
+## What Happens Next
+The tool automatically:
+1. Finds each post using your provided IDs
+2. Extracts all content (title, price, description, images)
+3. Deletes the old post
+4. Creates a new post with identical content
+5. Moves to the next post
 
-**Important:** Don't close the browser window or interfere with the process while it's running.
+**Important:** Don't close the browser or interfere while running.
 
 ## Automated Scheduling (macOS)
 
-You can set up automatic reposting using macOS Calendar and Automator to run the script at regular intervals.
+Set up automatic reposting using macOS Calendar and Automator.
 
-### Step 1: Create an Automator Script
+### Create Automator Script
 
-1. Open **Automator** (found in Applications > Utilities)
-2. Choose **"New Document"** and select **"Application"**
-3. In the search bar, type **"Run Shell Script"** and drag it to the workflow area
-4. Set the shell to **"/bin/bash"**
-5. Paste the following code into the script area:
+1. Open **Automator** (Applications > Utilities)
+2. Choose **"New Document"** → **"Application"**
+3. Search for **"Run Shell Script"** and drag it to workflow
+4. Set shell to **"/bin/bash"**
+5. Paste this code:
 
 ```bash
 #!/bin/bash
@@ -167,25 +118,25 @@ echo "==========================================================================
 cd -
 ```
 
-**Important:** Replace `/path/to/your/craigslist-auto-reposter` with the actual path to your project folder.
+**Important:** Replace `/path/to/your/craigslist-auto-reposter` with your actual project path.
 
-6. Save the application as **"Craigslist Reposter.app"** (or any name you want)
+6. Save as **"Craigslist Reposter.app"**
 
-### Step 2: Set Up Calendar Event
+### Set Up Calendar Event
 
 1. Open **Calendar** app
-2. Create a new event. Set the start time of the event to the time (ex: 7:30 AM) you want the reposting to happen. The end time doesn't matter, so you can set it to any time after the start time.
-3. Set the event to repeat at your desired interval (e.g., daily, weekly)
-4. In the event details, click **"Add Alert"**
-5. Choose **"Custom"** and select **"Open File"**
-6. Navigate to and select your **"Craigslist Reposter.app"** file
-7. Set the alert to trigger at the time you want the script to run. You can also have the event repeat, for example daily.
+2. Create new event at desired time (e.g., 7:30 AM)
+3. Set event to repeat (daily, weekly, etc.)
+4. Click **"Add Alert"** → **"Custom"** → **"Open File"**
+5. Select your **"Craigslist Reposter.app"** file
+6. Set alert to trigger at script run time
 
-**Note:** You will hear a sound each time when the script starts. This is to let you know that you have to log in. Everything else gets done automatically.
+**Note:** You will hear the SQWOZ BAB song Ой each time when the script starts. This is to let you know that you have to log in. Everything else gets done automatically.
+
 
 ## Example Configuration
 
-Here's a complete example of a `config.yml` file:
+Complete `config.yml` example:
 
 ```yaml
 email: "mybusiness@gmail.com"
