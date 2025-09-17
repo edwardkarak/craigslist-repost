@@ -116,7 +116,7 @@ Craigslist uses the title slug + the ID to uniquely identify your post. It needs
 
 ### Step 1
 #### Option 1: Automated Scheduling (Recommended)
-Set up automated scheduling by following the steps in "Automated Scheduling (macOS)" section below. Now, you can repost the same ads, for example, daily at 7AM, keeping your posts at the top. The script will run automatically at regular intervals. Also a song will play to let you know you need to log in. I have it play to the end so you can listen to it. I don't know what the song is called. If you want to keep it short, replace "long.wav" with "short.wav" in the `repost.py` file.
+Set up automated scheduling by following the steps in "Automated Scheduling (macOS)" section below. Now, you can repost the same ads, for example, daily at 7AM, keeping your posts at the top. The script will run automatically at regular intervals. Also a song by SQWOZ BAB (Ой) will play to let you know you need to log in. I have it play to the end so you can listen to it. If you want to keep it short, replace "SQWOZ_BAB.opus" with "short.wav" in the `repost.py` file.
 
 #### Option 2: Manual Execution
 If you want to run the script manually:
