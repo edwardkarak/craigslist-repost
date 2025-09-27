@@ -10,22 +10,22 @@ Automatically repost your Craigslist listings to keep them fresh and visible. Pe
 - Google Chrome
 - Craigslist account (free at [accounts.craigslist.org](https://accounts.craigslist.org))
 
-## Installation
+## How to Setup
 
-1. Download all files to your computer
-2. Install required packages:
+1. Download `repost.py` and `SQWOZ_BAB.opus` file into a folder. Stay in this folder for the remainder of these steps.
+
+2. Run `python -m venv my_env` (on macOS, use `python3`)
+
+3. Install required packages:
 
 ```bash
 pip install selenium beautifulsoup4 requests pyyaml librosa sounddevice
 ```
 (Use `pip3` on macOS)
 
-## Configuration
-
-Edit `config.yml` with your information:
+4. Create `config.yml` with information about which posts you want to be reposted. Anything not in this file won't be reposted.
 
 ```yaml
-email: "your-email@example.com"
 city_url: "https://newyork.craigslist.org"
 
 posts:
@@ -37,16 +37,15 @@ posts:
 ```
 
 **Field descriptions:**
-- `email`: Your contact email
-- `city_url`: Your local Craigslist city URL
+- `city_url`: Your local Craigslist city URL. For now, only NY metro area is supported.
 - `posts`: List of posts to repost
   - `id`: Post ID from your listing URL
   - `category`: Post category (see list below)
   - `area`: Local area/borough (see list below)
-  - `title_slug`: Title slug from your post URL
+  - `title_slug`: Title slug from your post URL (explained below)
   - `postal`: Your ZIP code
 
-## Finding Post Information
+### Finding Post Information
 
 **To get your post ID and title slug:**
 1. Go to your Craigslist listing
@@ -60,9 +59,9 @@ Both the title slug and ID are required to identify your post.
 antiques, appliances, arts & crafts, auto parts, baby & kid stuff, bicycles, books & magazines, business/commercial, cars & trucks, cell phones, clothing & accessories, collectibles, computer parts, computers, electronics, farm & garden, free stuff, furniture, garage & moving sales, general for sale, health and beauty, heavy equipment, household items, jewelry, materials, motorcycle parts, motorcycles/scooters, musical instruments, photo/video, rvs, sporting goods, tickets, tools, toys & games, trailers, video gaming, wanted
 
 **NYC Areas:**
-manhattan; brooklyn, queens, bronx, staten island, new jersey, long island, westchester, fairfield co (Connecticut)
+manhattan, brooklyn, queens, bronx, staten island, new jersey, long island, westchester, fairfield co (Connecticut)
 
-## Usage
+## How to Use
 
 ### Option 1: Automated Scheduling (Recommended)
 Set up automated scheduling using the "Automated Scheduling" section below. The script will run automatically at regular intervals (e.g., daily at 7AM) to keep your posts at the top.
@@ -71,12 +70,9 @@ Set up automated scheduling using the "Automated Scheduling" section below. The 
 Run the script manually:
 
 1. Open terminal/command prompt
-2. Navigate to the tool folder
-3. Run:
-```bash
-python repost.py
-```
-(Use `python3` on macOS)
+2. Navigate to the folder where we downloaded `repost.py`, etc.
+3. Run `source my_env/bin/activate`
+3. Run: `python repost.py` (Use `python3` on macOS)
 
 ## Login Process
 When the tool starts:
@@ -89,7 +85,7 @@ When the tool starts:
 ## What Happens Next
 The tool automatically:
 1. Finds each post using your provided IDs
-2. Extracts all content (title, price, description, images)
+2. Saves all content (title, price, description, images, item condition, etc.)
 3. Deletes the old post
 4. Creates a new post with identical content
 5. Moves to the next post
@@ -118,7 +114,7 @@ echo "==========================================================================
 cd -
 ```
 
-**Important:** Replace `/path/to/your/craigslist-auto-reposter` with your actual project path.
+Replace `/path/to/your/craigslist-auto-reposter` with the actual folder where you did the setup.
 
 6. Save as **"Craigslist Reposter.app"**
 
@@ -131,33 +127,8 @@ cd -
 5. Select your **"Craigslist Reposter.app"** file
 6. Set alert to trigger at script run time
 
-**Note:** You will hear the SQWOZ BAB song Ой each time when the script starts. This is to let you know that you have to log in. Everything else gets done automatically.
-
+You will hear the SQWOZ BAB song Ой each time when the script starts. This is to let you know that you have to log in. Everything else gets done automatically.
 
 ## Example Configuration
 
-Complete `config.yml` example:
-
-```yaml
-email: "mybusiness@gmail.com"
-city_url: "https://newyork.craigslist.org"
-
-posts:
-  - id: 7867090337
-    category: computers
-    area: Brooklyn
-    title_slug: brooklyn-macbook-air-2020
-    postal: 11204
-
-  - id: 7867090338
-    category: furniture
-    area: Manhattan
-    title_slug: my-large-closet-for-sale
-    postal: 10001
-
-  - id: 7867090339
-    category: electronics
-    area: Queens
-    title_slug: electronic-keyboard-discount-prices
-    postal: 11101
-```
+See the `config.yml` file. This stores which posts you want to be reposted.
