@@ -71,24 +71,18 @@ Run the script manually:
 
 1. Open terminal/command prompt
 2. Navigate to the folder where we downloaded `repost.py`, etc.
-3. Run `source my_env/bin/activate`
-3. Run: `python repost.py` (Use `python3` on macOS)
+3. Run `source my_env/bin/activate`. You should see `(my_env)` show up next to the prompt after running this.
+3. Run `python repost.py` (Use `python3` on macOS)
 
 ## Login Process
 When the tool starts:
-1. Chrome browser opens automatically
+1. Chrome browser opens automatically, with music playing
 2. Navigate to Craigslist login page
 3. Log in to your account manually
 4. Solve any CAPTCHA if prompted
 5. Wait for the tool to detect successful login
 
-## What Happens Next
-The tool automatically:
-1. Finds each post using your provided IDs
-2. Saves all content (title, price, description, images, item condition, etc.)
-3. Deletes the old post
-4. Creates a new post with identical content
-5. Moves to the next post
+After you log in, the tool will automatically find each post using the info in `config.yml`, save each post's content (title, price, description, images, item condition, etc.), delete the post, and create a new post with identical content. Once this is done for all posts, `config.yml` will be updated with the new post IDs/slugs. This is done since each new post has a brand new randomly-generated ID and slug.
 
 **Important:** Don't close the browser or interfere while running.
 
