@@ -14,13 +14,13 @@ import sounddevice as sd
 import librosa
 import threading
 
-DO_DELETE = True # should be True in production!
+DO_DELETE = True # Should be True in production!
 CONFIG_YAML = "config.yml"
 
-N_REP_SOUND = 2 			  # Number of times to repeat intro sound; set to 0 to disable
+N_REP_SOUND = 1 			  # Number of times to repeat intro sound; set to 0 to not play intro song
 INTRO_SOUND_FILE = "SQWOZ_BAB.opus" # Set to long.wav if you want to hear the full song, or short.wav if you don't, or SQWOZ_BAB.opus if you want to hear the nice song
 
-LOGIN_INTERVAL_SECS = 600
+LOGIN_INTERVAL_SECS = 900
 
 CATEGORY_TO_ZBPOS = {
 	"antiques": 0,
@@ -198,6 +198,7 @@ def extractPostIdFromHTML(html):
 		print(f"DUMP: HTML snippet: {html[:HTML_DUMP_TRIM_MAX_CHARS]}")
 	return ""
 
+# updateConfig: updates the CONFIG_YAML file with the new post IDs
 # idPairs: List of (oldId, newId) pairs as strings
 def updateConfig(idPairs):
 	nUpdated = 0
@@ -241,7 +242,7 @@ def login():
 		login_wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/logout']")))
 		print("DEBUG: Login detected, proceeding...")
 	except Exception as e:
-		print(f"ERROR: Failed to login after 10 minutes: {e}. Quitting...")
+		print(f"ERROR: Didn't log in after {LOGIN_INTERVAL_SECS/60} mins: {e}. Quitting...")
 		driver.quit()
 		exit(1)
 
@@ -322,7 +323,7 @@ def delPost(postId):
 		"""
 		print(f"DEBUG: Post {postId} deleted.")
 	except Exception as e:
-		print(f"❌ERROR: Failed to delete post {postId}: {e}")
+		print(f"ERROR: Failed to delete post {postId}: {e}")
 
 def downloadImage(url):
 	res = requests.get(url)
@@ -331,7 +332,7 @@ def downloadImage(url):
 		f.write(res.content)
 	return filename
 
-# postAd: return ID of ad posted as string or "" on failure
+# postAd: Actually posts the ad. Returns ID of ad posted as string or "" on failure
 def postAd(post, title, price, body, images, condition):
 	AREA_MAP = {
 		'brk': 'brooklyn',
@@ -356,12 +357,12 @@ def postAd(post, title, price, body, images, condition):
 
 	driver.get(URL_POST_AD)
 	if "/manage/" in driver.current_url:
-		print(f"❌ERROR: SHOULD NOT BE ON MANAGE PAGE WHEN MAKING NEW POST!")
+		print(f"ERROR: SHOULD NOT BE ON MANAGE PAGE WHEN MAKING NEW POST!")
 		print(f"DEBUG: {driver.current_url}")
-		x = input("") # TODO: make sure we don't edit, but make new post instead
+		x = input("") # TODO: make sure we don't edit, but make new post instead. Remove this?
 
 	print(f"DEBUG: Loaded post URL, URL: {driver.current_url}") # TODO: why is this the manage page?
-	print(driver.page_source[:HTML_DUMP_TRIM_MAX_CHARS])
+	print(f"DUMP: {driver.page_source[:HTML_DUMP_TRIM_MAX_CHARS]}")
 
 	done = False
 	steps = 0
@@ -624,12 +625,12 @@ def postAd(post, title, price, body, images, condition):
 			done = True
 			retval = extractPostIdFromHTML(page)
 			print("✅SUCCESS: Detected success screen. Posting complete")
-			print(f"DEBUG: Page = {page[:HTML_DUMP_TRIM_MAX_CHARS]}")
+			print(f"DUMP: {page[:HTML_DUMP_TRIM_MAX_CHARS]}")
 			print(f"DEBUG: retval = {retval}")
 			return retval
 		# 10. Fallback: unknown screen
 		print("DEBUG: Unknown screen, dumping page source")
-		print(driver.page_source[:HTML_DUMP_TRIM_MAX_CHARS])
+		print(f"DUMP: {driver.page_source[:HTML_DUMP_TRIM_MAX_CHARS]}")
 		try:
 			wait.until(lambda driver: driver.find_elements(By.TAG_NAME, "body"))
 		except Exception:
@@ -649,7 +650,7 @@ try:
 
 	for post in posts:
 		try:
-			# convert user-friendly string to slug (ex: Musical instruments -> msg, Brooklyn -> brk)
+			# Convert user-friendly string to slug (ex: Musical instruments -> msg, Brooklyn -> brk)
 			categorySlug = CATEGORY_TO_SLUG[post['category'].lower()]
 			boroughSlug = BOROUGH_TO_SLUG[post['area'].lower()]
 			print(f"DEBUG: category_slug = {categorySlug}")
