@@ -14,6 +14,10 @@ import sounddevice as sd
 import librosa
 import threading
 
+#TODO:
+# Use original images to preserve quality
+# Login timeout issue if we open laptop >= 15 mins in
+
 DO_DELETE = True # Should be True in production!
 CONFIG_YAML = "config.yml"
 
@@ -145,7 +149,7 @@ URL_POST_AD = "https://post.craigslist.org/c"
 MAX_POST_AD_STEPS = 20
 HTML_DUMP_TRIM_MAX_CHARS = 500
 TITLE_DEBUG_TRIM_MAX_CHARS = 60
-MAX_IMAGES = 8 # TODO: increase, real max is 24
+MAX_IMAGES = 12 # TODO: increase, real max is 24
 TEMP_IMAGES_LOCATION = "/tmp"
 
 def playIntroSound():
@@ -236,7 +240,7 @@ def updateConfig(idPairs):
 def login():
 	driver.get(URL_LOGIN)
 	print("Waiting for user to log in manually in browser, including solving any captcha if present...")
-	print("You have 10 minutes...")
+	print(f"You have {LOGIN_INTERVAL_SECS/60} minutes...")
 	try:
 		login_wait = WebDriverWait(driver, LOGIN_INTERVAL_SECS)
 		login_wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "a[href*='/logout']")))
